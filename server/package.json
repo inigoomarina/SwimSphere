@@ -1,0 +1,44 @@
+{
+  "name": "swimsphere-server",
+  "version": "1.0.0",
+  "description": "SwimSphere backend server",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "google-auth-library": "^9.15.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.13.2",
+    "multer": "^1.4.5-lts.1",
+    "semver": "^7.7.1",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "overrides": {
+    "nth-check": "^2.1.1",
+    "postcss": "^8.4.31",
+    "svgo": "^3.0.2",
+    "css-select": "^5.1.0",
+    "resolve-url-loader": "^5.0.0"
+  },
+  "resolutions": {
+    "nth-check": "^2.1.1",
+    "postcss": "^8.4.31",
+    "**/svgo/css-select/nth-check": "^2.1.1"
+  },
+  "author": "Your Name",
+  "license": "ISC"
+}

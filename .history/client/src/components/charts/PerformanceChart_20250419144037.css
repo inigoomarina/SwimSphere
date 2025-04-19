@@ -1,0 +1,60 @@
+.performance-chart-container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.no-chart-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-style: italic;
+}
+
+.stroke-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stroke-selector button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background-color: #f8f8f8;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.stroke-selector button:hover {
+  background-color: #e8e8e8;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.stroke-selector button.active {
+  background-color: #0066cc;
+  color: white;
+  border-color: #0066cc;
+}
+
+@media (max-width: 600px) {
+  .performance-chart-container {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .stroke-selector button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}

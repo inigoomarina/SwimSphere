@@ -1,0 +1,249 @@
+.leaderboard-page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.leaderboard-page-container h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #0066cc;
+}
+
+.leaderboard-intro {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #666;
+}
+
+.leaderboard-filters {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.leaderboard-filters h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+
+.filter-group {
+    margin-bottom: 10px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.clear-filters-btn {
+    background-color: #f2f2f2;
+    border: 1px solid #ddd;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    height: 44px;
+}
+
+.clear-filters-btn:hover {
+    background-color: #e6e6e6;
+}
+
+.leaderboard-content {
+    margin-top: 20px;
+}
+
+.leaderboard-category {
+    margin-bottom: 40px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.category-header {
+    background-color: #0066cc;
+    color: white;
+    padding: 15px 20px;
+}
+
+.category-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.leaderboard-table th {
+    background-color: #f9f9f9;
+    font-weight: 600;
+    color: #333;
+}
+
+.leaderboard-table tr:last-child td {
+    border-bottom: none;
+}
+
+.leaderboard-table tr:hover {
+    background-color: #f5f9ff;
+}
+
+.rank-column {
+    width: 80px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.time-column {
+    width: 120px;
+}
+
+.date-column {
+    width: 120px;
+}
+
+.location-column {
+    width: 150px;
+}
+
+.swimmer-column {
+    min-width: 200px;
+}
+
+.swimmer-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.swimmer-info {
+    display: flex;
+    align-items: center;
+}
+
+.swimmer-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+.swimmer-name {
+    font-weight: 500;
+}
+
+/* Medal styles */
+.medal {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.gold-medal {
+    background-color: #fafafa;
+}
+
+.gold-medal-icon::after {
+    content: '🥇';
+    font-size: 1.2rem;
+    margin-left: 5px;
+}
+
+.silver-medal {
+    background-color: #fafafa;
+}
+
+.silver-medal-icon::after {
+    content: '🥈';
+    font-size: 1.2rem;
+    margin-left: 5px;
+}
+
+.bronze-medal {
+    background-color: #fafafa;
+}
+
+.bronze-medal-icon::after {
+    content: '🥉';
+    font-size: 1.2rem;
+    margin-left: 5px;
+}
+
+.time {
+    font-weight: bold;
+    color: #0066cc;
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+.no-results {
+    padding: 40px;
+    text-align: center;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    color: #666;
+}
+
+.error-message {
+    background-color: #ffdddd;
+    color: #ff0000;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border: 1px solid #ff0000;
+}
+
+@media (max-width: 768px) {
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .leaderboard-table {
+        font-size: 0.9rem;
+    }
+    
+    .leaderboard-table th,
+    .leaderboard-table td {
+        padding: 10px;
+    }
+    
+    .rank-column {
+        width: 50px;
+    }
+    
+    .swimmer-column {
+        min-width: 150px;
+    }
+}

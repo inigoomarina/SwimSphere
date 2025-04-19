@@ -1,0 +1,62 @@
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;  /* Space between icon and text */
+  padding: 8px 16px;
+  border-radius: 4px;
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  background-color: #0055b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-button .button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+}
+
+/* Styles for specific button types */
+.add-btn,
+.submit-time-btn,
+.create-post-btn,
+.create-challenge-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Time input styling */
+.time-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* Fix for inline profile update controls */
+.profile-update-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Ensure Flowbite datepicker is visible */
+.flowbite-datepicker {
+  z-index: 50;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,199 @@
+.records-page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.records-page-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #0066cc;
+}
+
+.error-message {
+    background-color: #ffdddd;
+    color: #ff0000;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border: 1px solid #ff0000;
+}
+
+.records-filters {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.records-filters h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-weight: 600;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.filter-group select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.filter-actions {
+    display: flex;
+    align-items: flex-end;
+}
+
+.clear-filters-btn {
+    background-color: #f2f2f2;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.2s;
+}
+
+.clear-filters-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.records-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.record-group {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.record-group-header {
+    background-color: #0066cc;
+    color: white;
+    padding: 15px 20px;
+}
+
+.record-group-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.record-list {
+    padding: 0;
+}
+
+.record-card {
+    padding: 15px 20px;
+    display: flex;
+    border-bottom: 1px solid #eee;
+}
+
+.record-card:last-child {
+    border-bottom: none;
+}
+
+.record-time {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0066cc;
+    min-width: 120px;
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.record-details {
+    flex: 1;
+}
+
+.record-swimmer {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.record-meta {
+    display: flex;
+    gap: 15px;
+    margin: 0 0 5px 0;
+    color: #777;
+    font-size: 0.9rem;
+}
+
+.record-location, .record-competition {
+    margin: 5px 0 0 0;
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.no-records-message {
+    text-align: center;
+    padding: 40px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    color: #777;
+}
+
+.no-records-message p {
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .filters-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .record-card {
+        flex-direction: column;
+    }
+    
+    .record-time {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-actions {
+        width: 100%;
+    }
+    
+    .clear-filters-btn {
+        width: 100%;
+    }
+    
+    .record-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+}

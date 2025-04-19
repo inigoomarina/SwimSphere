@@ -1,0 +1,153 @@
+.create-post-form {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.create-post-form h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.post-content-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    min-height: 80px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.form-group input, 
+.form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: #fff;
+}
+
+.form-group label[for="media-upload"] {
+    display: inline-block;
+    padding: 8px 12px;
+    background-color: #f1f1f1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #333;
+}
+
+.form-group label[for="media-upload"]:hover {
+    background-color: #e0e0e0;
+}
+
+.form-group label[for="media-upload"] i {
+    margin-right: 5px;
+}
+
+.media-preview {
+    margin: 15px 0;
+    position: relative;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.media-preview img,
+.media-preview video {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 4px;
+    display: block;
+    margin: 0 auto;
+}
+
+.remove-media-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+.file-name {
+    background-color: #f1f1f1;
+    padding: 10px;
+    border-radius: 4px;
+    word-break: break-all;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.post-btn, .cancel-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.post-btn {
+    background-color: #0066cc;
+    color: white;
+}
+
+.post-btn:hover {
+    background-color: #0055aa;
+}
+
+.post-btn:disabled {
+    background-color: #99bbe0;
+    cursor: not-allowed;
+}
+
+.cancel-btn {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+.cancel-btn:hover {
+    background-color: #e0e0e0;
+}

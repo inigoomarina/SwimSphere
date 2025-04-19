@@ -1,0 +1,366 @@
+/* Base Variables */
+:root {
+  --stepper-text-primary: #060606;
+  --stepper-text-secondary: #a3a3a3;
+  --stepper-text-hover: #52525b;
+  --stepper-bg-default: #ffffff; /* White background for the card */
+  --stepper-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --stepper-connector-bg: #52525b;
+}
+
+/* Blue Theme (Swimmer) */
+.outer-container[data-theme="blue"] {
+  --stepper-primary-color: #0066cc; /* Primary Blue */
+  --stepper-primary-light: #e6f7ff;
+  --stepper-primary-dark: #004c99;
+  --stepper-inactive-bg: #f0f0f0;
+  --stepper-inactive-text: #a3a3a3;
+  --stepper-active-bg: var(--stepper-primary-color);
+  --stepper-active-text: var(--stepper-primary-color); /* Color of the dot */
+  --stepper-complete-bg: var(--stepper-primary-color);
+  --stepper-complete-icon: #ffffff; /* White check icon */
+  --stepper-connector-complete-bg: var(--stepper-primary-color);
+  --stepper-button-bg: var(--stepper-primary-color);
+  --stepper-button-text: #ffffff;
+  --stepper-button-hover-bg: var(--stepper-primary-dark);
+  --stepper-button-active-bg: var(--stepper-primary-dark);
+}
+
+/* Purple Theme (Coach) */
+.outer-container[data-theme="purple"] {
+  --stepper-primary-color: #6a0dad; /* Primary Purple */
+  --stepper-primary-light: #f3e5f5;
+  --stepper-primary-dark: #4a067a;
+  --stepper-inactive-bg: #f0f0f0;
+  --stepper-inactive-text: #a3a3a3;
+  --stepper-active-bg: var(--stepper-primary-color);
+  --stepper-active-text: var(--stepper-primary-color); /* Color of the dot */
+  --stepper-complete-bg: var(--stepper-primary-color);
+  --stepper-complete-icon: #ffffff; /* White check icon */
+  --stepper-connector-complete-bg: var(--stepper-primary-color);
+  --stepper-button-bg: var(--stepper-primary-color);
+  --stepper-button-text: #ffffff;
+  --stepper-button-hover-bg: var(--stepper-primary-dark);
+  --stepper-button-active-bg: var(--stepper-primary-dark);
+}
+
+
+.outer-container {
+  display: flex;
+  min-height: 100%;
+  flex: 1 1 0%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Background image applied in OnboardingPage.jsx */
+}
+
+/* Removed aspect-ratio to allow content to define height */
+
+.step-circle-container {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 36rem; /* Increased max-width slightly */
+  border-radius: 1rem; /* Slightly smaller radius */
+  box-shadow: var(--stepper-shadow);
+  background-color: var(--stepper-bg-default); /* Added white background */
+  border: 1px solid #e0e0e0; /* Subtle border */
+}
+
+.step-indicator-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 1.5rem 2rem; /* Adjusted padding */
+  border-bottom: 1px solid #eee; /* Separator line */
+}
+
+.step-content-default {
+  position: relative;
+  overflow: hidden; /* Keep this */
+  min-height: 250px; /* Ensure minimum height for transitions */
+}
+
+.step-default {
+  padding: 2rem; /* Consistent padding */
+}
+
+/* Form Styles within Steps */
+.step-default h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--stepper-text-primary);
+}
+
+.step-default .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.step-default label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.step-default input[type="text"],
+.step-default input[type="email"], /* Added email */
+.step-default select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.375rem; /* Tailwind's rounded-md */
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.step-default input[type="text"]:focus,
+.step-default input[type="email"]:focus,
+.step-default select:focus {
+  outline: none;
+  border-color: var(--stepper-primary-color);
+  box-shadow: 0 0 0 2px var(--stepper-primary-light);
+}
+
+/* Radio button styling for Role Selection */
+.role-selection {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.role-option {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.role-option input[type="radio"] {
+  display: none; /* Hide the actual radio button */
+}
+
+.role-option.selected {
+  border-color: var(--stepper-primary-color);
+  background-color: var(--stepper-primary-light);
+}
+
+.role-option:hover {
+  border-color: var(--stepper-primary-dark);
+}
+
+.role-option h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.role-option p {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Recommendation List Styles */
+.recommendation-list {
+  margin-top: 1rem;
+  max-height: 200px; /* Limit height */
+  overflow-y: auto; /* Add scroll if needed */
+}
+
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+.recommendation-item:last-child {
+  border-bottom: none;
+}
+
+.recommendation-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 1rem;
+  object-fit: cover;
+}
+
+.recommendation-info {
+  flex-grow: 1;
+}
+
+.recommendation-info h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.recommendation-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.follow-button {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--stepper-primary-color);
+  color: var(--stepper-primary-color);
+  background-color: transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  font-size: 0.9rem;
+}
+
+.follow-button:hover {
+  background-color: var(--stepper-primary-light);
+}
+
+.follow-button.following {
+  background-color: var(--stepper-primary-color);
+  color: var(--stepper-button-text);
+}
+
+
+/* Footer */
+.footer-container {
+  padding: 1.5rem 2rem; /* Adjusted padding */
+  border-top: 1px solid #eee; /* Separator line */
+}
+
+.footer-nav {
+  margin-top: 0; /* Removed top margin */
+  display: flex;
+}
+
+.footer-nav.spread {
+  justify-content: space-between;
+}
+
+.footer-nav.end {
+  justify-content: flex-end;
+}
+
+.back-button {
+  transition: color 0.2s;
+  border-radius: 0.375rem; /* Tailwind's rounded-md */
+  padding: 0.5rem 1rem; /* Adjusted padding */
+  color: var(--stepper-text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1rem;
+}
+
+.back-button:hover {
+  color: var(--stepper-text-hover);
+}
+
+.back-button.inactive {
+  pointer-events: none;
+  opacity: 0.5;
+  color: var(--stepper-text-secondary);
+}
+
+.next-button {
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem; /* Tailwind's rounded-md */
+  background-color: var(--stepper-button-bg);
+  color: var(--stepper-button-text);
+  font-weight: 500;
+  padding: 0.6rem 1.2rem; /* Adjusted padding */
+  cursor: pointer;
+  border: none;
+  font-size: 1rem;
+}
+
+.next-button:hover {
+  background-color: var(--stepper-button-hover-bg);
+}
+
+.next-button:active {
+  background-color: var(--stepper-button-active-bg);
+}
+
+/* Step Indicator Specifics */
+.step-indicator {
+  position: relative;
+  cursor: pointer;
+  outline: none;
+}
+
+.step-indicator-inner {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: background-color 0.3s, color 0.3s; /* Added transition */
+}
+
+.active-dot {
+  height: 0.75rem;
+  width: 0.75rem;
+  border-radius: 9999px;
+  background-color: var(--stepper-text-primary); /* Dot color */
+}
+
+.step-number {
+  font-size: 0.875rem;
+}
+
+.step-connector {
+  position: relative;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  height: 0.125rem;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 0.25rem;
+  background-color: var(--stepper-connector-bg);
+}
+
+.step-connector-inner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+}
+
+.check-icon {
+  height: 1rem;
+  width: 1rem;
+  color: var(--stepper-complete-icon); /* Use variable */
+}
+
+/* Final Step Specifics */
+.final-step-content {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.final-step-content h2 {
+  color: var(--stepper-primary-color);
+  margin-bottom: 1rem;
+}
+
+.final-step-content p {
+  margin-bottom: 2rem;
+  color: #555;
+}
+
+.go-to-dashboard-btn {
+  /* Uses .next-button styles */
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+}
