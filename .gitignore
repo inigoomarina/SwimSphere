@@ -40,6 +40,12 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 
+# Cache files
+**/.cache/
+
 # For server and client specific env files
 /client/.env
 /server/.env
+
+# History folder
+.history/
