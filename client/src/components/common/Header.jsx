@@ -1,8 +1,8 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { AuthContext } from '../../context/AuthContext';
-import { useChat } from '../../context/ChatContext';
+import { AuthContext } from '../../context/AuthContext.jsx';
+import { useChat } from '../../context/ChatContext.jsx';
 import SearchBar from '../search/SearchBar';
 
 const Header = () => {

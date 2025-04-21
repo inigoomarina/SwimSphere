@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { useHistory } from 'react-router-dom'; // Add this import
-import { AuthContext } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { AuthContext } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import { fetchUserProfile, updateUserProfile, addSwimTime, createPost, uploadMedia, getUserPosts, toggleFollowUser } from '../utils/api';
 import { formatDate, formatSwimTime } from '../utils/helpers';
 import Button from '../components/common/Button';

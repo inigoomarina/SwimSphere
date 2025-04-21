@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useHistory, Link as RouterLink } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext.jsx'; // Update import to use .jsx extension
 import { GoogleLogin } from '@react-oauth/google';
 import { loginUser, googleLogin } from '../utils/api';
 

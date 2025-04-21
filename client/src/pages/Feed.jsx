@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext.jsx';
 import { getPosts, createPost, uploadMedia } from '../utils/api';
 import PostCard from '../components/posts/PostCard';
 import CreatePostForm from '../components/posts/CreatePostForm';

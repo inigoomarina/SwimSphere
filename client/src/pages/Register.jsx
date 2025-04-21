@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useHistory, Link as RouterLink } from 'react-router-dom';
 import { registerUser, googleLogin } from '../utils/api';
 import { GoogleLogin } from '@react-oauth/google';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext.jsx'; // Update import to use .jsx extension
 
 // Material UI imports
 import {

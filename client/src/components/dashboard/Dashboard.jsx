@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext.jsx';
 import { fetchUserProfile } from '../../utils/api';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Loader from '../common/Loader';
