@@ -1,48 +1,58 @@
-.search-container {
+.search-bar-container {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  z-index: 1000;
 }
 
 .search-input-wrapper {
   position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
 }
 
 .search-icon {
   position: absolute;
-  left: 12px;
-  width: 18px;
-  height: 18px;
+  left: 14px;
   color: #666;
+  font-size: 1rem;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 35px 10px 40px;
+  padding: 10px 16px 10px 40px;
   border: 1px solid #ddd;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 0.95rem;
-  transition: all 0.2s;
+  background-color: #f5f5f5;
+  transition: all 0.2s ease;
 }
 
 .search-input:focus {
-  outline: none;
   border-color: #0066cc;
+  outline: none;
+  background-color: white;
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
 }
 
 .clear-search-btn {
   position: absolute;
-  right: 12px;
+  right: 14px;
   background: none;
   border: none;
-  font-size: 18px;
   color: #666;
   cursor: pointer;
-  padding: 0 5px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+}
+
+.clear-search-btn:hover {
+  background-color: #e0e0e0;
+  color: #333;
 }
 
 .search-results {
@@ -50,117 +60,96 @@
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 5px;
-  background: white;
+  margin-top: 8px;
+  background-color: white;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 350px;
   overflow-y: auto;
-  z-index: 1001;
+  z-index: 100;
+}
+
+.search-loading,
+.no-results,
+.search-hint {
+  padding: 16px;
+  text-align: center;
+  color: #666;
 }
 
 .search-loading {
-  padding: 15px;
-  text-align: center;
-  color: #666;
-  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.search-result-card {
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(0, 102, 204, 0.3);
+  border-top: 2px solid #0066cc;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.search-result-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  cursor: pointer;
+  padding: 12px 16px;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
   border-bottom: 1px solid #f0f0f0;
-  transition: background-color 0.2s;
 }
 
-.search-result-card:last-child {
+.search-result-item:last-child {
   border-bottom: none;
 }
 
-.search-result-card:hover {
-  background-color: #f8f9fa;
+.search-result-item:hover {
+  background-color: #f5f5f5;
 }
 
-.result-avatar {
-  width: 48px;
-  height: 48px;
+.search-result-item .user-avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  margin-right: 15px;
+  margin-right: 12px;
 }
 
-.result-details {
-  flex: 1;
+.search-result-item .user-info {
   display: flex;
   flex-direction: column;
 }
 
-.result-name {
+.search-result-item .user-name {
   font-weight: 600;
-  color: #333;
   margin-bottom: 2px;
 }
 
-.result-username {
+.search-result-item .user-username {
+  font-size: 0.85rem;
   color: #666;
-  font-size: 0.85rem;
-  margin-bottom: 2px;
-}
-
-.result-team {
-  color: #0066cc;
-  font-size: 0.85rem;
-}
-
-.follow-btn {
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 15px;
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  min-width: 80px;
-  text-align: center;
-}
-
-.follow-btn.following {
-  background-color: #0066cc;
-  border-color: #0066cc;
-  color: white;
-}
-
-.follow-btn:hover:not(:disabled) {
-  background-color: #e0e0e0;
-}
-
-.follow-btn.following:hover {
-  background-color: #cc0000;
-  border-color: #cc0000;
-}
-
-.no-results {
-  padding: 15px;
-  text-align: center;
-  color: #666;
-}
-
-/* Loading spinner for follow button */
-.loading-spinner-small {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .search-results {
+    max-height: 300px;
+  }
+  
+  .search-result-item {
+    padding: 10px;
+  }
+  
+  .search-result-item .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
 }

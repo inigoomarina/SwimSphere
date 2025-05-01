@@ -5,7 +5,7 @@ const RecordSchema = new Schema({
     stroke: {
         type: String,
         required: true,
-        enum: ['freestyle', 'backstroke', 'breaststroke', 'butterfly', 'individualMedley']
+        enum: ['freestyle', 'backstroke', 'breaststroke', 'butterfly', 'individualMedley', 'freestyleRelay', 'medleyRelay']
     },
     distance: {
         type: Number,
@@ -23,6 +23,10 @@ const RecordSchema = new Schema({
         type: String,
         required: true
     },
+    // Add field for relay teams
+    relaySwimmers: [{
+        type: String
+    }],
     date: {
         type: Date,
         default: Date.now
@@ -47,6 +51,27 @@ const RecordSchema = new Schema({
     competition: {
         type: String,
         default: ''
+    },
+    isRelay: {
+        type: Boolean,
+        default: false
+    },
+    course: {
+        type: String,
+        enum: ['LCM', 'SCM', 'SCY'],
+        required: true
+    },
+    type: {
+        type: String,
+        required: true
+    },
+    team: {
+        type: String,
+        default: ''
+    },
+    country: {
+        type: String,
+        default: ''
     }
 });
 
@@ -64,4 +89,18 @@ RecordSchema.set('toObject', { virtuals: true });
 // Index for efficient querying
 RecordSchema.index({ stroke: 1, distance: 1, region: 1 });
 
-module.exports = mongoose.model('Record', RecordSchema);
+module.exp
+// Virtual field for formatted time (mm:ss.ms)
+RecordSchema.virtual('formattedTime').get(function() {
+    const minutes = Math.floor(this.time / 60);
+    const seconds = (this.time % 60).toFixed(2);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+});
+
+// Setting toJSON and toObject options to include virtuals
+RecordSchema.set('toJSON', { virtuals: true });
+RecordSchema.set('toObject', { virtuals: true });
+
+// Index for efficient querying
+RecordSchema.index({ stroke: 1, distance: 1, region: 1 });
+orts = mongoose.model('Record', RecordSchema);

@@ -53,6 +53,12 @@ const Login = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
+      if (!credentialResponse || !credentialResponse.credential) {
+        setError('Invalid Google response. Please try again.');
+        return;
+      }
+      
+      console.log("Google login credential received:", credentialResponse.credential.substring(0, 20) + "...");
       const data = await googleLogin(credentialResponse.credential);
 
       if (data.status === 'success') {
@@ -61,7 +67,6 @@ const Login = () => {
         login(loggedInUser);
         
         // Only redirect to onboarding if this is a new user
-        // Check for a specific "isNewUser" flag from the backend
         if (data.data.isNewUser === true) {
           history.push('/onboarding');
         } else {
@@ -72,11 +77,13 @@ const Login = () => {
         setError(data.message || 'Google login failed');
       }
     } catch (err) {
+      console.error('Google login error:', err);
       setError('Google login failed. Please try again.');
     }
   };
 
-  const handleGoogleFailure = () => {
+  const handleGoogleFailure = (error) => {
+    console.error('Google login failure:', error);
     setError('Google login failed. Please try again.');
   };
 
@@ -276,7 +283,8 @@ const Login = () => {
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleFailure}
                   shape="rectangular"
-                  width="100%"
+                  size="large"
+                  text="signin_with"
                   useOneTap
                 />
               </Box>

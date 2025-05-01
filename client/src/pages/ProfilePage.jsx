@@ -1,22 +1,30 @@
 import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
-import { useHistory } from 'react-router-dom'; // Add this import
-import { AuthContext } from '../context/AuthContext.jsx';
-import { useToast } from '../context/ToastContext.jsx';
-import { fetchUserProfile, updateUserProfile, addSwimTime, createPost, uploadMedia, getUserPosts, toggleFollowUser } from '../utils/api';
-import { formatDate, formatSwimTime } from '../utils/helpers';
-import Button from '../components/common/Button';
-import Loader from '../components/common/Loader';
-import PerformanceChart from '../components/charts/PerformanceChart';
-import { FaInstagram, FaTwitter, FaShareAlt, FaEnvelope, FaEdit, FaCamera, FaPlus, FaTrophy, FaCalendarAlt, 
-         FaMedal, FaChartLine, FaEllipsisH, FaSwimmer, FaStopwatch, FaAward, FaUsers } from 'react-icons/fa';
-import PostCard from '../components/posts/PostCard';
-import ImageCropper from '../components/common/ImageCropper';
+import { useHistory } from 'react-router-dom';
+import { motion } from 'framer-motion'; // Add this import
+import { FaPlus, FaEdit, FaTrophy, FaEnvelope, FaCog, FaSwimmer, 
+         FaStopwatch, FaAward, FaUsers, FaCalendarAlt, FaMedal, 
+         FaChartLine, FaEllipsisH, FaCamera } from 'react-icons/fa';
 import { Datepicker } from "flowbite-react";
 import dayjs from 'dayjs';
+import { AuthContext } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import ActionButton from '../components/common/ActionButton';
+import Button from '../components/common/Button';
 import TimeInput from '../components/common/TimeInput';
 import PostFeed from '../components/posts/PostFeed';
 import CreatePostForm from '../components/posts/CreatePostForm';
+import ImageCropper from '../components/common/ImageCropper';
+import Loader from '../components/common/Loader';
+import PerformanceChart from '../components/charts/PerformanceChart';
+import { 
+  createPost, 
+  toggleFollowUser, 
+  fetchUserProfile, 
+  updateUserProfile, 
+  uploadMedia, 
+  addSwimTime 
+} from '../utils/api';
+import { formatDate, formatSwimTime } from '../utils/helpers';
 import './ProfilePage.css';
 
 const PostsTab = () => {
@@ -85,7 +93,7 @@ const PostsTab = () => {
     );
 };
 
-const TimesTab = ({ swimTimes = [], onTimeClick }) => {
+const TimesTab = ({ swimTimes = [], onTimeAdded }) => {
     const [activeSection, setActiveSection] = useState('meets');
     const [showSubmitForm, setShowSubmitForm] = useState(false);
     const [showAddMeetForm, setShowAddMeetForm] = useState(false);
@@ -130,9 +138,9 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
     const bestTimes = useMemo(() => {
         if (!swimTimes || swimTimes.length === 0) {
             return [
-                { event: '50m Freestyle', time: '23.45', date: '2023-11-15' },
-                { event: '100m Freestyle', time: '52.10', date: '2023-11-20' },
-                { event: '100m Butterfly', time: '58.75', date: '2023-10-05' }
+                { event: '50m Freestyle', time: '23.45', date: '2023-11-15', location: 'City Pool' },
+                { event: '100m Freestyle', time: '52.10', date: '2023-11-20', location: 'University Aquatics' },
+                { event: '100m Butterfly', time: '58.75', date: '2023-10-05', location: 'Regional Championship' }
             ];
         }
         
@@ -154,26 +162,61 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                 time: formatSwimTime(bestTime.time),
                 rawTime: bestTime.time,
                 date: bestTime.date,
-                location: bestTime.location,
-                competition: bestTime.competition
+                location: bestTime.location || 'Not specified',
+                competition: bestTime.competition || 'Not specified'
             };
-        }).sort((a, b) => a.rawTime - b.rawTime);
+        }).sort((a, b) => {
+            if (a.event < b.event) return -1;
+            if (a.event > b.event) return 1;
+            return a.rawTime - b.rawTime;
+        });
     }, [swimTimes]);
     
     const availableEvents = [...new Set(swimTimes?.map(t => `${t.distance}m ${t.stroke}`) || [])];
     
+    const chartDataForProgression = useMemo(() => {
+        if (!selectedEvent || !swimTimes || swimTimes.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        const eventTimes = swimTimes
+            .filter(time => `${time.distance}m ${time.stroke}` === selectedEvent)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (eventTimes.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        const dataPoints = eventTimes.map(time => ({
+            x: new Date(time.date),
+            y: time.time
+        }));
+
+        const labels = eventTimes.map(time => new Date(time.date).toLocaleDateString());
+
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: selectedEvent,
+                    data: dataPoints,
+                    borderColor: '#0066cc',
+                    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                    fill: false, 
+                }
+            ]
+        };
+    }, [selectedEvent, swimTimes]);
+
     const formatTimeInput = (input) => {
-        // Handle non-string inputs
         if (input === null || input === undefined) {
             return '';
         }
-        
-        // Convert to string if it's not already
         if (typeof input !== 'string') {
             input = String(input);
         }
         
-        input = input.replace(/[^\d:.]/g, ''); // Allow decimal points
+        input = input.replace(/[^\d:.]/g, '');
         if (input.includes(':')) {
             const [minutes, seconds] = input.split(':');
             const formattedMinutes = minutes ? minutes.slice(0, 2) : '0';
@@ -213,8 +256,16 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
             let seconds = 0;
             if (timeParts.length === 2) {
                 seconds = parseFloat(timeParts[0]) * 60 + parseFloat(timeParts[1]);
-            } else {
+            } else if (formData.time) {
                 seconds = parseFloat(formData.time);
+            } else {
+                showToast("Invalid time format.", "error");
+                return;
+            }
+
+            if (isNaN(seconds) || seconds <= 0) {
+                showToast("Invalid time value.", "error");
+                return;
             }
             
             const timeData = {
@@ -227,13 +278,11 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
             };
             
             const response = await addSwimTime(timeData);
-            
             if (response.status === 'success') {
                 const newSwimTime = {
-                    ...timeData,
-                    _id: response.data._id || Date.now().toString()
+                    ...response.data,
+                    date: dayjs(response.data.date).toISOString(), 
                 };
-                
                 setShowSubmitForm(false);
                 setFormData({
                     date: formatDate(new Date()),
@@ -243,14 +292,12 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                     location: '',
                     competition: '',
                 });
-                
                 showToast("Time added successfully!");
-                
-                if (onTimeClick) {
-                    onTimeClick(newSwimTime);
+                if (onTimeAdded) {
+                    onTimeAdded(newSwimTime); 
                 }
             } else {
-                showToast("Failed to add time. Please try again.", "error");
+                showToast(response.message || "Failed to add time. Please try again.", "error");
             }
         } catch (err) {
             console.error("Error adding swim time:", err);
@@ -269,7 +316,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
         setMeets(prev => [newMeet, ...prev]);
         setShowAddMeetForm(false);
         showToast("Meet added successfully!");
-        
         setMeetFormData({
             name: '',
             date: formatDate(new Date()),
@@ -280,7 +326,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
     
     const handleTimeSelection = (time) => {
         setSelectedTime(time);
-        if(onTimeClick) onTimeClick(time);
     };
     
     const handleEventSelection = (event) => {
@@ -383,7 +428,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                             </div>
                         </div>
                     )}
-                    
                     <div className="meets-grid">
                         {meets.map((meet) => (
                             <div key={meet.id} className="meet-card">
@@ -412,7 +456,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                             Add Time
                         </ActionButton>
                     </div>
-                    
                     {showSubmitForm && (
                         <div className="modal-overlay" onClick={() => setShowSubmitForm(false)}>
                             <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -449,7 +492,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                                             </select>
                                         </div>
                                     </div>
-                                    
                                     <div className="form-row">
                                         <div className="form-group">
                                             <label htmlFor="distance">Distance (m)</label>
@@ -478,7 +520,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                                             />
                                         </div>
                                     </div>
-                                    
                                     <div className="form-row">
                                         <div className="form-group">
                                             <label htmlFor="location">Location</label>
@@ -503,7 +544,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                                             />
                                         </div>
                                     </div>
-                                    
                                     <div className="modal-actions">
                                         <Button type="button" onClick={() => setShowSubmitForm(false)} className="cancel-btn">Cancel</Button>
                                         <Button type="submit" className="add-btn">
@@ -514,7 +554,6 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                             </div>
                         </div>
                     )}
-                    
                     <div className="best-times-grid">
                         {bestTimes.length > 0 ? (
                             bestTimes.map((record, index) => (
@@ -537,7 +576,7 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                                                 e.stopPropagation();
                                                 handleEventSelection(`${record.event}`);
                                                 setActiveSection('progression');
-                                            }}
+                                            }} 
                                         >
                                             <FaChartLine /> View Progression
                                         </Button>
@@ -573,14 +612,14 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                     {selectedEvent ? (
                         <div className="event-progression">
                             <div className="time-progression">
-                                <h4>{selectedEvent} Progression</h4>
-                                <div className="chart-container">
-                                    <PerformanceChart event={selectedEvent} />
-                                </div>
+                                <PerformanceChart 
+                                    title={`${selectedEvent} Progression`} 
+                                    data={chartDataForProgression} 
+                                    height={400} 
+                                />
                             </div>
-                            
                             <div className="times-list-container">
-                                <h4>All Times</h4>
+                                <h4>All Times for {selectedEvent}</h4>
                                 {swimTimes && swimTimes.filter(time => `${time.distance}m ${time.stroke}` === selectedEvent).length > 0 ? (
                                     <ul className="times-list">
                                         {swimTimes
@@ -588,9 +627,9 @@ const TimesTab = ({ swimTimes = [], onTimeClick }) => {
                                             .sort((a, b) => new Date(b.date) - new Date(a.date))
                                             .map((time, index) => (
                                                 <li 
-                                                    key={index} 
+                                                    key={time._id || index}
                                                     onClick={() => handleTimeSelection(time)}
-                                                    className={selectedTime === time ? 'selected' : ''}
+                                                    className={selectedTime?._id === time._id ? 'selected' : ''}
                                                 >
                                                     <span>{new Date(time.date).toLocaleDateString()}</span>
                                                     <span>{time.location || 'N/A'}</span>
@@ -624,7 +663,6 @@ const ChallengesTab = () => {
         endDate: dayjs().add(7, 'day'),
     });
     const { showToast } = useToast();
-    
     const challenges = [
         {
             id: 'c1',
@@ -651,7 +689,7 @@ const ChallengesTab = () => {
             completedDate: '2023-11-05'
         }
     ];
-    
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -738,7 +776,6 @@ const ChallengesTab = () => {
                     </div>
                 </div>
             )}
-            
             <div className="challenges-grid">
                 {challenges.map(challenge => (
                     <div key={challenge.id} className="challenge-card">
@@ -769,7 +806,7 @@ const ChallengesTab = () => {
 const ProfilePage = () => {
     const { user, login } = useContext(AuthContext);
     const { showToast } = useToast();
-    const history = useHistory(); // Initialize the history object
+    const history = useHistory(); 
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -780,30 +817,45 @@ const ProfilePage = () => {
     const [showImageCropper, setShowImageCropper] = useState(false);
     const [croppingImage, setCroppingImage] = useState(null);
     const [croppedImage, setCroppedImage] = useState(null);
-    const [cropTarget, setCropTarget] = useState(''); // 'profile' or 'banner'
+    const [cropTarget, setCropTarget] = useState('');
     const [showBannerOptions, setShowBannerOptions] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         bio: '',
         swimTeam: '',
-        location: '',
         favoriteStroke: '',
         favoriteEvent: '',
+        city: '',
+        country: '',
     });
     const [activeTab, setActiveTab] = useState('posts');
     const [followersCount, setFollowersCount] = useState(0);
     const [followingCount, setFollowingCount] = useState(0);
     const [isFollowing, setIsFollowing] = useState(false);
     const [isFollowLoading, setIsFollowLoading] = useState(false);
-
     const stats = {
         posts: 15,
     };
 
     const socialLinks = {
         instagram: 'https://instagram.com/example',
-        twitter: 'https://twitter.com/example'
+        twitter: 'https://twitter.com/example',
+    };
+
+    const handleTimeAdded = (newTime) => {
+        setProfile(prevProfile => {
+            if (!prevProfile) return null; 
+            
+            const existingTimes = prevProfile.swimTimes || [];
+            const updatedTimes = [...existingTimes, newTime];
+            updatedTimes.sort((a, b) => new Date(b.date) - new Date(a.date)); 
+            
+            return {
+                ...prevProfile,
+                swimTimes: updatedTimes
+            };
+        });
     };
 
     useEffect(() => {
@@ -811,21 +863,26 @@ const ProfilePage = () => {
             try {
                 setLoading(true);
                 const response = await fetchUserProfile();
-                console.log("Profile data:", response.data);
+                
+                if (response.status !== 'success') {
+                    throw new Error(response.message || 'Failed to load profile data');
+                }
+                
                 setProfile(response.data);
                 setFormData({
                     firstName: response.data.firstName || '',
                     lastName: response.data.lastName || '',
                     bio: response.data.bio || '',
                     swimTeam: response.data.swimTeam || '',
-                    location: response.data.location || 'City, Country',
                     favoriteStroke: response.data.favoriteStroke || '',
                     favoriteEvent: response.data.favoriteEvent || '',
+                    city: response.data.city || '',
+                    country: response.data.country || '',
                 });
                 setError('');
             } catch (err) {
                 console.error("Error loading profile:", err);
-                setError('Failed to load profile data');
+                setError(err.message || 'Failed to load profile data');
             } finally {
                 setLoading(false);
             }
@@ -838,7 +895,6 @@ const ProfilePage = () => {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-                
                 const data = await response.json();
                 if (data.status === 'success') {
                     setFollowersCount(data.data.followers);
@@ -862,38 +918,35 @@ const ProfilePage = () => {
                 lastName: profile.lastName || '',
                 bio: profile.bio || '',
                 swimTeam: profile.swimTeam || '',
-                location: profile.location || 'City, Country',
                 favoriteStroke: profile.favoriteStroke || '',
                 favoriteEvent: profile.favoriteEvent || '',
+                city: profile.city || '',
+                country: profile.country || '',
             });
         }
     };
-
+    
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-
+    
     const handleProfileUpdate = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
         try {
-            console.log("Updating profile with data:", formData);
             const response = await updateUserProfile(formData);
-            
             if (response.status === 'success') {
                 setProfile(prevProfile => ({
                     ...prevProfile,
                     ...formData
                 }));
-
                 if (login) {
                     login({
                         ...user,
-                        ...formData
+                        ...formData,
                     });
                 }
-
                 setEditing(false);
                 setHighlightsEditing(false);
                 setError('');
@@ -910,69 +963,55 @@ const ProfilePage = () => {
             setLoading(false);
         }
     };
-
+            
     const handleTimeClick = (time) => {
         console.log("Selected time:", time);
     };
-
+    
     const handleBannerUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = () => {
             setCroppingImage(reader.result);
             setCropTarget('banner');  
             setShowImageCropper(true);
-            // Prevent body scrolling when modal is open
             document.body.style.overflow = 'hidden';
-            // Hide banner options menu after selecting a file
             setShowBannerOptions(false);
         };
         reader.readAsDataURL(file);
     };
-
+    
     const handleProfilePictureUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = () => {
             setCroppingImage(reader.result);
             setCropTarget('profile');
             setShowImageCropper(true);
-            // Prevent body scrolling when modal is open
             document.body.style.overflow = 'hidden';
         };
         reader.readAsDataURL(file);
     };
-
+    
     const handleCropComplete = async () => {
         if (!croppedImage) return;
-        
         try {
             setLoading(true);
-            
-            // Convert base64 data URL to Blob for upload
             const fetchRes = await fetch(croppedImage);
             const blob = await fetchRes.blob();
             
-            // Create a File object from the Blob
             const file = new File([blob], 
                 cropTarget === 'profile' ? 'profile-image.jpg' : 'banner-image.jpg', 
                 { type: 'image/jpeg' }
             );
             
-            // Upload the image
             const uploadResponse = await uploadMedia(file);
-            
             if (!uploadResponse || uploadResponse.status !== 'success') {
                 throw new Error(uploadResponse?.message || "Failed to upload image");
             }
-            
             const imageUrl = uploadResponse.data.url;
-            
-            // Create update data with the new image URL
             const updateData = {};
             if (cropTarget === 'profile') {
                 updateData.profileImage = imageUrl;
@@ -980,39 +1019,30 @@ const ProfilePage = () => {
                 updateData.profileBanner = imageUrl;
             }
             
-            // Update user profile with the new image URL
             const updateResponse = await updateUserProfile(updateData);
             
             if (!updateResponse || updateResponse.status !== 'success') {
                 throw new Error(updateResponse?.message || "Failed to update profile");
             }
             
-            // Update local state with new image URL
             setProfile(prev => ({ ...prev, ...updateData }));
             
-            // Update user context if available (for profile images)
             if (login && cropTarget === 'profile') {
                 login({
                     ...user,
-                    profileImage: imageUrl
+                    profileImage: imageUrl,
                 });
             }
-            
-            // Show success message
             showToast(
                 cropTarget === 'profile' 
                     ? "Profile picture updated successfully!" 
                     : "Banner updated successfully!"
             );
             
-            // Close modal and reset state
             setShowImageCropper(false);
             setCroppingImage(null);
             setCroppedImage(null);
-            
-            // Re-enable scrolling on body
             document.body.style.overflow = 'auto';
-            
         } catch (err) {
             console.error("Image upload error:", err);
             showToast("Failed to update image. Please try again.", "error");
@@ -1020,15 +1050,14 @@ const ProfilePage = () => {
             setLoading(false);
         }
     };
-
+    
     const handleCancelCrop = () => {
         setShowImageCropper(false);
         setCroppingImage(null);
         setCroppedImage(null);
-        // Re-enable scrolling on body
         document.body.style.overflow = 'auto';
     };
-
+    
     const toggleHighlightsEditing = () => {
         setHighlightsEditing(!highlightsEditing);
         if (highlightsEditing && profile) {
@@ -1039,7 +1068,7 @@ const ProfilePage = () => {
             }));
         }
     };
-
+    
     const getFavoriteEventBestTime = () => {
         if (!profile || !profile.favoriteEvent || !profile.swimTimes || profile.swimTimes.length === 0) {
             return null;
@@ -1047,7 +1076,6 @@ const ProfilePage = () => {
         
         const parts = profile.favoriteEvent.split('m ');
         if (parts.length !== 2) return null;
-        
         const distance = parseInt(parts[0]);
         const stroke = parts[1].toLowerCase();
         
@@ -1061,9 +1089,9 @@ const ProfilePage = () => {
             time.time < best.time ? time : best, eventTimes[0]
         );
     };
-
+    
     const favoriteEventBestTime = getFavoriteEventBestTime();
-
+        
     const handleToggleFollow = async () => {
         if (isFollowLoading) return;
         
@@ -1072,10 +1100,7 @@ const ProfilePage = () => {
             const response = await toggleFollowUser(profile.id);
             
             if (response.status === 'success') {
-                // Update follow status
                 setIsFollowing(!isFollowing);
-                
-                // Update followers count
                 setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1);
             }
         } catch (err) {
@@ -1090,11 +1115,28 @@ const ProfilePage = () => {
 
     return (
         <div className="profile-page-v2">
-            {error && <div className="error-message">{error}</div>}
-
+            {error && (
+                <div className="error-message">
+                    {error}
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        style={{ marginLeft: '10px', padding: '5px 10px' }}
+                    >
+                        Retry Loading Profile
+                    </button>
+                </div>
+            )}
+            
+            {loading && !profile && <Loader />}
+            
             {profile && (
                 <>
-                    <div className="profile-banner">
+                    <motion.div 
+                        className="profile-banner"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
                         <img 
                             src={profile.profileBanner || "/images/swimming-background.jpg"} 
                             alt="Profile Banner" 
@@ -1122,9 +1164,14 @@ const ProfilePage = () => {
                             accept="image/*"
                             style={{ display: 'none' }}
                         />
-                    </div>
+                    </motion.div>
                     <div className="profile-header-container">
-                        <div className="profile-header-v2">
+                        <motion.div 
+                            className="profile-header-v2"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                        >
                             <div className="profile-picture-section">
                                 <div className="profile-picture-container">
                                     <img
@@ -1150,11 +1197,14 @@ const ProfilePage = () => {
                                     </div>
                                 </div>
                             </div>
-                            
                             <div className="profile-info-section">
                                 <div className="profile-name-location">
                                     <h1>{profile.firstName} {profile.lastName}</h1>
-                                    <p className="location">{formData.location}</p>
+                                    <p className="location">
+                                        {profile.city && profile.country 
+                                            ? `${profile.city}, ${profile.country}` 
+                                            : profile.city || profile.country || 'Location not set'}
+                                    </p>
                                     <p className="team">{profile.swimTeam || 'No Team Specified'}</p>
                                 </div>
                                 <div className="profile-stats-v2">
@@ -1163,8 +1213,6 @@ const ProfilePage = () => {
                                     <span><strong>{followingCount}</strong> Following</span>
                                 </div>
                             </div>
-                            
-                            {/* Only show these buttons if viewing someone else's profile */}
                             {user && user.id !== profile.id && (
                                 <div className="profile-actions-v2">
                                     {isFollowing ? (
@@ -1192,12 +1240,23 @@ const ProfilePage = () => {
                                             {isFollowLoading ? 'Processing...' : 'Follow'}
                                         </Button>
                                     )}
-                                    <Button className="share-btn"><FaShareAlt /></Button>
+                                    <Button 
+                                        onClick={() => history.push('/settings')}
+                                        className="settings-btn"
+                                        title="Settings"
+                                    >
+                                        <FaCog />
+                                    </Button>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     </div>
-                    <div className="profile-content-area">
+                    <motion.div 
+                        className="profile-content-area"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                    >
                         <div className="profile-card bio-card">
                             <div className="card-header">
                                 <h3>About</h3>
@@ -1225,7 +1284,6 @@ const ProfilePage = () => {
                             ) : (
                                 <>
                                     <p>{profile.bio || 'No bio available.'}</p>
-                                    <Button onClick={handleEditToggle} className="edit-bio-btn">Edit Bio</Button>
                                 </>
                             )}
                         </div>
@@ -1270,9 +1328,21 @@ const ProfilePage = () => {
                                             <option value="50m freestyle">50m Freestyle</option>
                                             <option value="100m freestyle">100m Freestyle</option>
                                             <option value="200m freestyle">200m Freestyle</option>
+                                            <option value="400m freestyle">400m Freestyle</option>
+                                            <option value="800m freestyle">800m Freestyle</option>
+                                            <option value="1500m freestyle">1500m Freestyle</option>
+                                            <option value="50m breaststroke">50m Breaststroke</option>
+                                            <option value="100m breaststroke">100m Breaststroke</option>
+                                            <option value="200m breaststroke">200m Breaststroke</option>
+                                            <option value="50m backstroke">50m Backstroke</option>
                                             <option value="100m backstroke">100m Backstroke</option>
+                                            <option value="200m backstroke">200m Backstroke</option>
+                                            <option value="50m butterfly">50m Butterfly</option>
                                             <option value="100m butterfly">100m Butterfly</option>
+                                            <option value="200m butterfly">200m Butterfly</option>
+                                            <option value="100m individualMedley">100m Individual Medley</option>
                                             <option value="200m individualMedley">200m Individual Medley</option>
+                                            <option value="400m individualMedley">400m Individual Medley</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -1341,9 +1411,13 @@ const ProfilePage = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    <div className="profile-tabs-container">
+                    </motion.div>
+                    <motion.div 
+                        className="profile-tabs-container"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.3 }}
+                    >
                         <div className="tab-navigation-v2">
                             <button
                                 className={`tab-button ${activeTab === 'posts' ? 'active' : ''}`}
@@ -1364,13 +1438,12 @@ const ProfilePage = () => {
                                 Challenges
                             </button>
                         </div>
-                        
                         <div className="tab-content-v2">
                             {activeTab === 'posts' && <PostsTab />}
-                            {activeTab === 'times' && <TimesTab swimTimes={profile.swimTimes} onTimeClick={handleTimeClick} />}
+                            {activeTab === 'times' && <TimesTab swimTimes={profile.swimTimes} onTimeAdded={handleTimeAdded} />}
                             {activeTab === 'challenges' && <ChallengesTab />}
                         </div>
-                    </div>
+                    </motion.div>
                     {showImageCropper && (
                         <div className="modal-overlay" onClick={handleCancelCrop}>
                             <div className="cropper-modal" onClick={e => e.stopPropagation()}>

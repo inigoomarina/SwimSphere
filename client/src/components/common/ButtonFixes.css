@@ -1,0 +1,37 @@
+/* Action buttons consistent styling */
+.add-btn,
+.create-post-btn,
+.submit-time-btn, 
+.create-challenge-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #0066cc !important; /* Force blue background */
+  color: white !important; /* Force white text */
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 1;
+  visibility: visible;
+  text-decoration: none; /* Prevent underlines if used on anchor tags */
+}
+
+.add-btn:hover,
+.create-post-btn:hover,
+.submit-time-btn:hover,
+.create-challenge-btn:hover {
+  background-color: #0055b3 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-btn svg,
+.create-post-btn svg,
+.submit-time-btn svg,
+.create-challenge-btn svg {
+  font-size: 1.1rem;
+}

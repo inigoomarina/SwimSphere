@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react'; // Import useCallback
 import { Link } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext.jsx';
-import { fetchUserProfile } from '../../utils/api';
+import { AuthContext } from '../../context/AuthContext.jsx'; // Ensure correct extension
+import { fetchUserProfile, createPost, uploadMedia } from '../../utils/api'; // Import createPost and uploadMedia
+import { useToast } from '../../context/ToastContext.jsx'; // Import useToast
 import DashboardLayout from '../layouts/DashboardLayout';
 import Loader from '../common/Loader';
-import PostFeed from '../posts/PostFeed';
+import PostFeed from '../posts/PostFeed'; // This component internally uses getFeedPosts
+import CreatePostForm from '../posts/CreatePostForm'; // Import CreatePostForm
+import Button from '../common/Button'; // Import Button for modal actions
 import './Dashboard.css';
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
+    const { showToast } = useToast(); // Get showToast function
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [profile, setProfile] = useState(null);
@@ -18,6 +22,59 @@ const Dashboard = () => {
         fastestTime: null,
         recentImprovement: 0
     });
+    // State for Create Post Modal
+    const [showCreatePostModal, setShowCreatePostModal] = useState(false); 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [feedRefreshKey, setFeedRefreshKey] = useState(0); // Add refresh key for PostFeed
+
+    // Define handleCreatePost *before* it's used in mainContent
+    const handleCreatePostSubmit = useCallback(async (postData) => {
+        setIsSubmitting(true);
+        try {
+            let mediaUrl = '';
+            // Handle file upload if present
+            if (postData.mediaFile) {
+                try {
+                    const uploadResponse = await uploadMedia(postData.mediaFile);
+                    if (uploadResponse.status === 'success') {
+                        mediaUrl = uploadResponse.data.url;
+                    } else {
+                        throw new Error(uploadResponse.message || 'Failed to upload media');
+                    }
+                } catch (uploadError) {
+                    console.error('Media upload error:', uploadError);
+                    showToast('Failed to upload media. Please try again.', 'error');
+                    setIsSubmitting(false);
+                    return false; // Indicate failure
+                }
+            }
+
+            // Create the post
+            const response = await createPost({
+                content: postData.content,
+                mediaUrl,
+                visibility: postData.visibility || 'public'
+            });
+
+            if (response.status === 'success') {
+                showToast('Post created successfully!');
+                setShowCreatePostModal(false); // Close modal on success
+                
+                // Trigger a refresh of the PostFeed component
+                setFeedRefreshKey(prev => prev + 1);
+                
+                setIsSubmitting(false);
+                return true; // Indicate success
+            } else {
+                throw new Error(response.message || 'Failed to create post');
+            }
+        } catch (error) {
+            console.error('Failed to create post:', error);
+            showToast(error.message || 'Failed to create post', 'error');
+            setIsSubmitting(false);
+            return false; // Indicate failure
+        }
+    }, [showToast]); // Add dependencies
 
     useEffect(() => {
         const loadDashboardData = async () => {
@@ -35,13 +92,15 @@ const Dashboard = () => {
                     // Calculate total swims
                     const totalSwims = swimTimes.length;
                     
-                    // Find favorite stroke (most frequently used)
-                    const strokeCounts = swimTimes.reduce((counts, swim) => {
-                        counts[swim.stroke] = (counts[swim.stroke] || 0) + 1;
-                        return counts;
-                    }, {});
-                    const favoriteStroke = Object.keys(strokeCounts).reduce((a, b) => 
-                        strokeCounts[a] > strokeCounts[b] ? a : b);
+                    // Use the favoriteStroke from user context if available, otherwise calculate from swim times
+                    const favoriteStroke = user.favoriteStroke || Object.keys(
+                        swimTimes.reduce((counts, swim) => {
+                            counts[swim.stroke] = (counts[swim.stroke] || 0) + 1;
+                            return counts;
+                        }, {})
+                    ).reduce((a, b) => 
+                        (swimTimes.filter(s => s.stroke === a).length > 
+                         swimTimes.filter(s => s.stroke === b).length) ? a : b, '');
                     
                     // Find fastest time
                     const fastestSwim = swimTimes.reduce((fastest, swim) => 
@@ -77,10 +136,17 @@ const Dashboard = () => {
                     
                     setSwimStats({
                         totalSwims,
-                        favoriteStroke,
+                        // Prioritize user context's favoriteStroke over calculated one
+                        favoriteStroke: user.favoriteStroke || favoriteStroke,
                         fastestTime: fastestSwim,
                         recentImprovement
                     });
+                } else if (user.favoriteStroke) {
+                    // If no swim times but user has a favorite stroke set in their profile
+                    setSwimStats(prevStats => ({
+                        ...prevStats,
+                        favoriteStroke: user.favoriteStroke
+                    }));
                 }
                 
                 setError('');
@@ -93,35 +159,46 @@ const Dashboard = () => {
         };
         
         loadDashboardData();
-    }, []);
-    
-    // Format time in seconds to mm:ss.ms format
-    const formatTime = (seconds) => {
-        if (!seconds && seconds !== 0) return '-';
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = (seconds % 60).toFixed(2);
-        return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-    };
+    }, [user]); // Add user as a dependency to re-fetch when user object changes
     
     if (loading) return <Loader />;
     
+    const abbreviateStroke = (stroke) => {
+        if (!stroke) return '-';
+        switch (stroke.toLowerCase()) {
+            case 'freestyle': return 'FR';
+            case 'backstroke': return 'BK';
+            case 'breaststroke': return 'BR';
+            case 'butterfly': return 'FL';
+            case 'individualmedley': // Handle potential variations
+            case 'individual medley': return 'IM';
+            default: return stroke.substring(0, 2).toUpperCase(); // Fallback
+        }
+    };
+
     // Left sidebar content
     const leftSidebar = (
         <>
             {/* Profile Card */}
             <div className="sidebar-card profile-card">
-                <div className="profile-card-cover"></div>
+                <div className="profile-card-cover">
+                    <img 
+                        src={user?.profileBanner || profile?.profileBanner || "/images/swimming-background.jpg"} 
+                        alt="Profile Banner" 
+                        className="profile-banner-img"
+                    />
+                </div>
                 <div className="profile-card-content">
                     <img 
-                        src={profile?.profileImage || "/default-avatar.png"} 
-                        alt={profile?.firstName || "User"} 
+                        src={user?.profileImage || profile?.profileImage || "/default-avatar.png"} 
+                        alt={user?.firstName || profile?.firstName || "User"} 
                         className="profile-avatar"
                     />
                     <h3 className="profile-name">
-                        {profile?.firstName} {profile?.lastName || profile?.username}
+                        {user?.firstName || profile?.firstName} {user?.lastName || profile?.lastName || user?.username || profile?.username}
                     </h3>
-                    <p className="profile-tagline">
-                        {profile?.bio || `Swimmer${profile?.swimTeam ? ` at ${profile?.swimTeam}` : ''}`}
+                    <p className="profile-team">
+                        {user?.swimTeam || profile?.swimTeam || 'No team'}
                     </p>
                 </div>
                 <div className="profile-card-stats">
@@ -131,50 +208,43 @@ const Dashboard = () => {
                     </div>
                     <div className="stat">
                         <div className="stat-label">Favorite Stroke</div>
-                        <div className="stat-value">{swimStats.favoriteStroke ? swimStats.favoriteStroke.charAt(0).toUpperCase() + swimStats.favoriteStroke.slice(1) : '-'}</div>
+                        <div className="stat-value">{abbreviateStroke(user?.favoriteStroke || swimStats.favoriteStroke)}</div>
                     </div>
                 </div>
-                <Link to="/profile" className="view-profile-link">View Full Profile</Link>
+                <Link to="/profile" className="view-profile-link">View Profile</Link>
             </div>
             
             {/* Navigation Menu */}
             <nav className="sidebar-nav">
                 <Link to="/dashboard" className="sidebar-nav-item active">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" className="nav-icon" fill="currentColor">
+                        <path d="M160-120v-480l320-240 320 240v480H560v-280H400v280H160Z"/>
                     </svg>
                     Dashboard
                 </Link>
-                <Link to="/feed" className="sidebar-nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z" clipRule="evenodd" />
-                        <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z" />
-                    </svg>
-                    Feed
-                </Link>
-                <Link to="/leaderboard" className="sidebar-nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                    </svg>
-                    Leaderboards
-                </Link>
-                <Link to="/records" className="sidebar-nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clipRule="evenodd" />
-                    </svg>
-                    Records
-                </Link>
                 <Link to="/profile" className="sidebar-nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" className="nav-icon" fill="currentColor">
+                        <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z"/>
                     </svg>
                     Profile
                 </Link>
                 <Link to="/chat" className="sidebar-nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" className="nav-icon" fill="currentColor">
+                        <path d="M80-80v-720q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H240L80-80Zm160-320h320v-80H240v80Zm0-120h480v-80H240v80Zm0-120h480v-80H240v80Z"/>
                     </svg>
                     Messages
+                </Link>
+                <Link to="/leaderboard" className="sidebar-nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" className="nav-icon" fill="currentColor">
+                        <path d="M80-120v-480h220v480H80Zm290 0v-720h220v720H370Zm290 0v-400h220v400H660Z"/>
+                    </svg>
+                    Leaderboards
+                </Link>
+                <Link to="/records" className="sidebar-nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" className="nav-icon" fill="currentColor">
+                        <path d="M280-120v-80h160v-124q-49-11-87.5-41.5T296-442q-75-9-125.5-65.5T120-640v-40q0-33 23.5-56.5T200-760h80v-80h400v80h80q33 0 56.5 23.5T840-680v40q0 76-50.5 132.5T664-442q-18 46-56.5 76.5T520-324v124h160v80H280Zm0-408v-152h-80v40q0 38 22 68.5t58 43.5Zm400 0q36-13 58-43.5t22-68.5v-40h-80v152Z"/>
+                    </svg>
+                    Records
                 </Link>
                 {user?.role === 'coach' && (
                     <Link to="/coach" className="sidebar-nav-item">
@@ -193,7 +263,32 @@ const Dashboard = () => {
         <>
             {error && <div className="error-message">{error}</div>}
             
-            <PostFeed showCreatePost={true} />
+            {/* Clickable "What's on your mind" input to open modal */}
+            <div className="create-post-card">
+                <div className="create-post-header">
+                    <img 
+                        src={user?.profileImage || "/default-avatar.png"} 
+                        alt="Your Profile" 
+                        className="post-user-avatar"
+                    />
+                    {/* Make the wrapper clickable */}
+                    <div 
+                        className="create-post-input-wrapper" 
+                        onClick={() => setShowCreatePostModal(true)} // Open modal on click
+                    >
+                        {/* Use a div styled like the input, or keep input readOnly */}
+                        <div className="create-post-textfield"> 
+                           What's on your mind?
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <PostFeed 
+                showCreatePost={false} // Keep this false as modal handles creation
+                key={`dashboard-feed-${feedRefreshKey}`} // Use key with refresh value to force re-render
+                forceRefresh={feedRefreshKey} // Pass refresh trigger as prop
+            />
         </>
     );
     
@@ -249,8 +344,6 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-                    
-                    {/* More challenge items can be added here */}
                 </div>
                 <Link to="/challenges" className="view-all-link">View All Challenges</Link>
             </div>
@@ -267,19 +360,33 @@ const Dashboard = () => {
                         </div>
                         <button className="follow-button">Follow</button>
                     </div>
-                    
-                    {/* More swimmer suggestions can be added here */}
                 </div>
             </div>
         </>
     );
 
     return (
-        <DashboardLayout
-            leftSidebar={leftSidebar}
-            mainContent={mainContent}
-            rightSidebar={rightSidebar}
-        />
+        <>
+            <DashboardLayout
+                leftSidebar={leftSidebar}
+                mainContent={mainContent}
+                rightSidebar={rightSidebar}
+            />
+            
+            {/* Create Post Modal */}
+            {showCreatePostModal && (
+                <div className="modal-overlay" onClick={() => setShowCreatePostModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        {/* Use CreatePostForm inside the modal */}
+                        <CreatePostForm 
+                            onSubmit={handleCreatePostSubmit} 
+                            onCancel={() => setShowCreatePostModal(false)} // Pass cancel handler
+                            loading={isSubmitting} // Pass loading state
+                        />
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

@@ -47,19 +47,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // New fields for swimmer profiles
     role: {
         type: String,
-        enum: ['swimmer', 'coach', 'admin'],
-        default: 'swimmer'
+        enum: ['swimmer', 'coach', 'admin', ''],
+        default: ''
     },
     firstName: {
         type: String,
-        trim: true
+        default: ''
     },
     lastName: {
         type: String,
-        trim: true
+        default: ''
     },
     bio: {
         type: String,
@@ -68,9 +67,35 @@ const userSchema = new mongoose.Schema({
     birthDate: {
         type: Date
     },
+    city: {
+        type: String,
+        default: ''
+    },
+    country: {
+        type: String,
+        default: ''
+    },
     swimTeam: {
         type: String,
         default: ''
+    },
+    favoriteStroke: {
+        type: String,
+        enum: ['freestyle', 'backstroke', 'breaststroke', 'butterfly', 'individualMedley', ''],
+        default: ''
+    },
+    favoriteEvent: {
+        type: String,
+        default: ''
+    },
+    coachRole: {
+        type: String,
+        enum: ['head', 'assistant', 'volunteer', 'other', ''],
+        default: ''
+    },
+    onboardingComplete: {
+        type: Boolean,
+        default: false
     },
     achievements: [{
         title: String,
@@ -91,7 +116,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    profileBanner: {  // Add this field
+    profileBanner: {
         type: String,
         default: ''
     },
@@ -103,6 +128,16 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+}, {
+    timestamps: true
+});
+
+// Add the chat references to the user schema
+userSchema.add({
+    chats: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Chat'
+    }]
 });
 
 const User = mongoose.model('User', userSchema);

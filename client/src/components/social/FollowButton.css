@@ -1,0 +1,98 @@
+.follow-button {
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  white-space: nowrap;
+}
+
+.follow-button:focus {
+  outline: none;
+}
+
+.follow-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Size variants */
+.follow-btn-sm {
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  min-width: 80px;
+}
+
+.follow-btn-md {
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  min-width: 100px;
+}
+
+.follow-btn-lg {
+  padding: 10px 20px;
+  font-size: 1rem;
+  min-width: 120px;
+}
+
+/* Not following state */
+.follow-button:not(.following) {
+  background-color: #0066cc;
+  color: white;
+}
+
+.follow-button:not(.following):hover {
+  background-color: #0055aa;
+}
+
+/* Following state */
+.follow-button.following {
+  background-color: white;
+  color: #0066cc;
+  border: 1px solid #0066cc;
+}
+
+.follow-button.following:hover {
+  background-color: #ffeaea;
+  color: #e53e3e;
+  border-color: #e53e3e;
+}
+
+/* Loading dots animation */
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-dots span {
+  animation: loading-dots 1.4s infinite both;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes loading-dots {
+  0%, 80%, 100% { 
+    opacity: 0;
+  }
+  40% { 
+    opacity: 1; 
+  }
+}
+
+@media (max-width: 768px) {
+  .follow-btn-md {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    min-width: 80px;
+  }
+}

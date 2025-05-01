@@ -80,28 +80,40 @@ const Register = () => {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    console.log("Google Register Success (Initial)");
+    setError('');
     try {
-      const data = await googleLogin(credentialResponse.credential);
+      if (!credentialResponse || !credentialResponse.credential) {
+        setError('Invalid Google response. Please try again.');
+        return;
+      }
       
+      console.log("Attempting API call with credential:", credentialResponse.credential.substring(0, 20) + "...");
+      const data = await googleLogin(credentialResponse.credential);
+      console.log("API Response:", data);
+
       if (data.status === 'success') {
+        console.log("Google registration API call successful.");
         localStorage.setItem('token', data.data.token);
         const loggedInUser = data.data.user;
+        console.log("User data received:", loggedInUser);
         login(loggedInUser);
-        // Check if profile seems incomplete (e.g., missing role or name)
-        if (!loggedInUser.role || !loggedInUser.firstName) {
-          history.push('/onboarding');
-        } else {
-          history.push('/dashboard');
-        }
+
+        // Always show onboarding for registration process - this helps collect all required data
+        console.log("Redirecting to onboarding to complete registration.");
+        history.push('/onboarding');
       } else {
+        console.error("Google registration API call failed:", data.message);
         setError(data.message || 'Google registration failed');
       }
     } catch (err) {
+      console.error('Error during Google registration API call:', err);
       setError('Google registration failed. Please try again.');
     }
   };
 
-  const handleGoogleFailure = () => {
+  const handleGoogleFailure = (error) => {
+    console.error('Google Register Failed (Client-side):', error);
     setError('Google registration failed. Please try again.');
   };
 
@@ -358,9 +370,9 @@ const Register = () => {
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleFailure}
                   shape="rectangular"
-                  width="100%"
+                  size="large"
+                  text="signup_with"
                   useOneTap
-                  text="signup_with" // Change text to "Sign up with Google"
                 />
               </Box>
             </Box>

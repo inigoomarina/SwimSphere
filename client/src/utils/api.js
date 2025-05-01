@@ -35,10 +35,17 @@ export const loginUser = async (credentials) => {
 
 export const googleLogin = async (credential) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/auth/google-login`, { credential });
+        console.log("Sending Google credential to backend...");
+        const response = await axios.post(`${API_BASE_URL}/auth/google-login`, { credential, tokenId: credential });
+        console.log("Google login response received:", response.status);
         return response.data;
     } catch (error) {
-        throw error.response?.data || { message: 'Server error' };
+        console.error("Google login API error:", error);
+        if (error.response) {
+            console.error("Error response:", error.response.data);
+            throw error.response.data || { message: 'Server error during Google login' };
+        }
+        throw { message: 'Network error during Google login' };
     }
 };
 

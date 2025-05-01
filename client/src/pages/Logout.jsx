@@ -1,37 +1,37 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 import { logoutUser } from '../utils/api';
 import Loader from '../components/common/Loader';
 
 const Logout = () => {
-  const { logout } = useContext(AuthContext);
   const history = useHistory();
   
   useEffect(() => {
     const performLogout = async () => {
       try {
         // Call the logout API
-        logoutUser();
+        await logoutUser();
         
-        // Perform local logout
-        if (logout) {
-          await logout();
-        } else {
-          // Fallback if logout function not available in context
-          localStorage.removeItem('token');
-        }
+        // Clear token from localStorage
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         
-        // Redirect to login page
-        history.push('/login');
+        // Force a complete page reload to reset all application state
+        window.location.href = '/login';
       } catch (error) {
         console.error('Error during logout:', error);
-        history.push('/login');
+        
+        // Clear token as a fallback
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        
+        // Force reload to login page
+        window.location.href = '/login';
       }
     };
     
     performLogout();
-  }, [logout, history]);
+  }, [history]);
   
   return (
     <div className="logout-page">

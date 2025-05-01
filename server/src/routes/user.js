@@ -6,7 +6,9 @@ const {
     getSwimTimes,
     deleteSwimTime,
     addAchievement,
-    searchUsers
+    searchUsers,
+    getUserById,
+    getFollowingUsers
 } = require('../controllers/userController');
 const { authenticate } = require('../middleware/auth');
 
@@ -26,5 +28,11 @@ router.post('/achievements', authenticate, addAchievement);
 
 // User search route
 router.get('/search', authenticate, searchUsers);
+
+// Get user by ID
+router.get('/:id', authenticate, getUserById);
+
+// Get following users (for chat list)
+router.get('/following', authenticate, getFollowingUsers);
 
 module.exports = router;

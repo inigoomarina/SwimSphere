@@ -1,62 +1,55 @@
-import React, { createContext, useState, useContext } from 'react';
-import { FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 
-const ToastContext = createContext();
+// Create context with default values
+export const ToastContext = createContext({
+  showToast: () => {},
+  hideToast: () => {},
+  toasts: []
+});
 
-export const useToast = () => useContext(ToastContext);
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    console.warn("useToast must be used within a ToastProvider");
+    // Return a default implementation to prevent crashes
+    return {
+      showToast: () => {},
+      hideToast: () => {},
+      toasts: []
+    };
+  }
+  return context;
+};
 
 export const ToastProvider = ({ children }) => {
-  const [toast, setToast] = useState({
-    visible: false,
-    message: '',
-    type: 'success',
-  });
+  const [toasts, setToasts] = useState([]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({
-      visible: true,
-      message,
-      type,
-    });
+  const hideToast = useCallback((id) => {
+    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+  }, []);
 
-    // Auto hide after 3 seconds
+  const showToast = useCallback((message, type = 'success', duration = 3000) => {
+    const id = Date.now();
+    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
+
     setTimeout(() => {
-      setToast(prev => ({ ...prev, visible: false }));
-    }, 3000);
-  };
+      hideToast(id);
+    }, duration);
+    
+    return id;
+  }, [hideToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, hideToast, toasts }}>
       {children}
-      <Toast 
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-      />
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast toast-${toast.type}`}>
+            <p>{toast.message}</p>
+            <button onClick={() => hideToast(toast.id)}>×</button>
+          </div>
+        ))}
+      </div>
     </ToastContext.Provider>
   );
 };
-
-// Toast component
-const Toast = ({ visible, message, type }) => {
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          className={`toast toast-${type}`}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-        >
-          <div className="toast-icon">
-            {type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
-          </div>
-          <p className="toast-message">{message}</p>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export default ToastContext;

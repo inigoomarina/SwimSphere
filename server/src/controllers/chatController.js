@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Message = require('../models/Message');
+const Chat = require('../models/Chat');
 const { generateResponse } = require('../utils/helpers');
 
 // Store active users
@@ -144,70 +145,57 @@ exports.setupSocketIO = (io) => {
     }
 };
 
-// Get recent conversations for a user
-exports.getConversations = async (req, res) => {
+// Get chat history between current user and another user
+exports.getChatHistory = async (req, res) => {
     try {
-        // Find users who have exchanged messages with the current user
-        const messagedUsers = await Message.aggregate([
-            {
-                $match: {
-                    $or: [
-                        { senderId: mongoose.Types.ObjectId(req.user.id) },
-                        { recipientId: mongoose.Types.ObjectId(req.user.id) }
-                    ]
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        $cond: [
-                            { $eq: ["$senderId", mongoose.Types.ObjectId(req.user.id)] },
-                            "$recipientId",
-                            "$senderId"
-                        ]
-                    },
-                    lastMessage: { $last: "$content" },
-                    lastTimestamp: { $max: "$timestamp" },
-                    unreadCount: {
-                        $sum: {
-                            $cond: [
-                                { $and: [
-                                    { $eq: ["$recipientId", mongoose.Types.ObjectId(req.user.id)] },
-                                    { $eq: ["$read", false] }
-                                ]},
-                                1,
-                                0
-                            ]
-                        }
-                    }
-                }
-            },
-            { $sort: { lastTimestamp: -1 } }
-        ]);
+        const { userId } = req.params;
+        const { page = 1, limit = 20 } = req.query;
+        const skip = (page - 1) * limit;
         
-        // Get user info for each conversation partner
-        const userIds = messagedUsers.map(item => item._id);
-        const users = await User.find({ _id: { $in: userIds } })
-            .select('username firstName lastName profileImage');
-        
-        // Update default profile image in conversations
-        const conversations = messagedUsers.map(item => {
-            const user = users.find(u => u._id.toString() === item._id.toString());
-            return {
-                userId: user._id,
-                username: user.username,
-                fullName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username,
-                profileImage: user.profileImage || '/images/default-avatar.png',
-                lastMessage: item.lastMessage,
-                lastTimestamp: item.lastTimestamp,
-                unreadCount: item.unreadCount
-            };
+        // Find or create chat between the two users
+        let chat = await Chat.findOne({
+            participants: { $all: [req.user.id, userId] }
+        })
+        .populate({
+            path: 'messages.sender',
+            select: 'username firstName lastName profileImage'
         });
         
-        res.json(generateResponse('success', 'Conversations retrieved successfully', conversations));
+        if (!chat) {
+            // No chat history yet, return empty array
+            return res.json(generateResponse('success', 'No chat history', { 
+                messages: [],
+                hasMore: false
+            }));
+        }
+        
+        // Sort messages in reverse chronological order and paginate
+        const messages = chat.messages
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(skip, skip + parseInt(limit))
+            .reverse(); // Reverse again to get chronological order
+        
+        // Mark messages as read
+        const unreadMessages = chat.messages.filter(msg => 
+            msg.sender._id.toString() !== req.user.id && 
+            !msg.read
+        );
+        
+        if (unreadMessages.length > 0) {
+            unreadMessages.forEach(msg => {
+                msg.read = true;
+            });
+            
+            await chat.save();
+        }
+        
+        res.json(generateResponse('success', 'Chat history retrieved', {
+            messages,
+            hasMore: chat.messages.length > skip + messages.length
+        }));
     } catch (error) {
-        console.error('Get conversations error:', error);
-        res.status(500).json(generateResponse('error', 'Error retrieving conversations'));
+        console.error('Get chat history error:', error);
+        res.status(500).json(generateResponse('error', 'Error retrieving chat history'));
     }
 };
 
@@ -216,14 +204,151 @@ exports.markAsRead = async (req, res) => {
     try {
         const { senderId } = req.params;
         
-        await Message.updateMany(
-            { senderId, recipientId: req.user.id, read: false },
-            { $set: { read: true } }
-        );
+        const chat = await Chat.findOne({
+            participants: { $all: [req.user.id, senderId] }
+        });
         
-        res.json(generateResponse('success', 'Messages marked as read'));
+        if (!chat) {
+            return res.status(404).json(generateResponse('error', 'Chat not found'));
+        }
+        
+        // Mark all messages from the sender as read
+        let updateCount = 0;
+        chat.messages.forEach(msg => {
+            if (msg.sender.toString() === senderId && !msg.read) {
+                msg.read = true;
+                updateCount++;
+            }
+        });
+        
+        if (updateCount > 0) {
+            await chat.save();
+        }
+        
+        res.json(generateResponse('success', 'Messages marked as read', { count: updateCount }));
     } catch (error) {
         console.error('Mark as read error:', error);
         res.status(500).json(generateResponse('error', 'Error marking messages as read'));
+    }
+};
+
+// Create or update a chat
+exports.createOrUpdateChat = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { text } = req.body;
+        
+        if (!text) {
+            return res.status(400).json(generateResponse('error', 'Message text is required'));
+        }
+        
+        // Check if chat already exists
+        let chat = await Chat.findOne({
+            participants: { $all: [req.user.id, userId] }
+        });
+        
+        if (!chat) {
+            // Create new chat
+            chat = new Chat({
+                participants: [req.user.id, userId],
+                messages: [{
+                    sender: req.user.id,
+                    text,
+                    timestamp: new Date(),
+                    read: false
+                }]
+            });
+        } else {
+            // Add message to existing chat
+            chat.messages.push({
+                sender: req.user.id,
+                text,
+                timestamp: new Date(),
+                read: false
+            });
+        }
+        
+        await chat.save();
+        
+        // Update user chat references if needed
+        await Promise.all([
+            User.updateOne(
+                { _id: req.user.id, chats: { $ne: chat._id } },
+                { $push: { chats: chat._id } }
+            ),
+            User.updateOne(
+                { _id: userId, chats: { $ne: chat._id } },
+                { $push: { chats: chat._id } }
+            )
+        ]);
+        
+        // Get the sender info
+        const sender = await User.findById(req.user.id)
+            .select('username firstName lastName profileImage');
+        
+        const newMessage = {
+            id: chat.messages[chat.messages.length - 1]._id,
+            text,
+            timestamp: new Date(),
+            sender: {
+                id: sender._id,
+                username: sender.username,
+                firstName: sender.firstName,
+                lastName: sender.lastName,
+                profileImage: sender.profileImage || '/images/default-avatar.png'
+            }
+        };
+        
+        res.json(generateResponse('success', 'Message sent', newMessage));
+        
+    } catch (error) {
+        console.error('Create/update chat error:', error);
+        res.status(500).json(generateResponse('error', 'Error sending message'));
+    }
+};
+
+// Get all conversations for current user
+exports.getConversations = async (req, res) => {
+    try {
+        // Find all chats where the current user is a participant
+        const chats = await Chat.find({
+            participants: req.user.id
+        })
+        .populate('participants', 'username firstName lastName profileImage')
+        .sort({ lastUpdated: -1 });
+        
+        // Format conversations for frontend
+        const conversations = chats.map(chat => {
+            // Get the other participant (not the current user)
+            const otherParticipant = chat.participants.find(
+                participant => participant._id.toString() !== req.user.id
+            );
+            
+            // Get last message
+            const lastMessage = chat.messages.length > 0
+                ? chat.messages[chat.messages.length - 1]
+                : null;
+            
+            // Count unread messages
+            const unreadCount = chat.messages.filter(
+                msg => msg.sender.toString() !== req.user.id && !msg.read
+            ).length;
+            
+            return {
+                id: chat._id,
+                userId: otherParticipant._id,
+                username: otherParticipant.username,
+                fullName: `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username,
+                profileImage: otherParticipant.profileImage || '/images/default-avatar.png',
+                lastMessage: lastMessage ? lastMessage.text : null,
+                lastUpdated: lastMessage ? lastMessage.timestamp : chat.lastUpdated,
+                unreadCount
+            };
+        });
+        
+        res.json(generateResponse('success', 'Conversations retrieved', conversations));
+    } catch (error) {
+        console.error('Get conversations error:', error);
+        res.status(500).json(generateResponse('error', 'Error retrieving conversations'));
     }
 };

@@ -3,6 +3,27 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { validateEmail, generateResponse } = require('../utils/helpers');
 
+// Create a function to format user data for response
+const formatUserResponse = (user) => {
+    return {
+        id: user._id, 
+        username: user.username, 
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        city: user.city,
+        country: user.country,
+        favoriteStroke: user.favoriteStroke,
+        favoriteEvent: user.favoriteEvent,
+        swimTeam: user.swimTeam,
+        coachRole: user.coachRole,
+        profileImage: user.profileImage,
+        bio: user.bio,
+        onboardingComplete: user.onboardingComplete
+    };
+}
+
 exports.register = async (req, res) => {
     const { username, email, password } = req.body;
 
@@ -63,7 +84,7 @@ exports.login = async (req, res) => {
         
         res.status(200).json(generateResponse('success', 'Login successful', {
             token, 
-            user: { id: user._id, username: user.username, email: user.email }
+            user: formatUserResponse(user)
         }));
     } catch (error) {
         console.error('Login error:', error);
@@ -72,19 +93,30 @@ exports.login = async (req, res) => {
 };
 
 exports.googleLogin = async (req, res) => {
-    const { tokenId } = req.body;
+    const { credential, tokenId } = req.body;
+    
+    // Use either credential (new format) or tokenId (old format) depending on what's available
+    const token = credential || tokenId;
+    
+    if (!token) {
+        return res.status(400).json(generateResponse('error', 'No Google token provided'));
+    }
 
     try {
+        console.log("Received Google token, attempting verification...");
         // Verify the Google token
         const { OAuth2Client } = require('google-auth-library');
         const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
         
         const ticket = await client.verifyIdToken({
-            idToken: tokenId,
+            idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID
         });
         
-        const { email_verified, email, name, picture } = ticket.getPayload();
+        const payload = ticket.getPayload();
+        const { email, email_verified, name, picture, given_name, family_name } = payload;
+        
+        console.log(`Google verification success for: ${email}`);
         
         if (!email_verified) {
             return res.status(400).json(generateResponse('error', 'Email not verified with Google'));
@@ -95,15 +127,15 @@ exports.googleLogin = async (req, res) => {
         let isNewUser = false;
         
         if (!user) {
+            console.log(`Creating new user for: ${email}`);
             // Create new user if doesn't exist
-            const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+            const username = (given_name || name.split(' ')[0]).toLowerCase() + Math.floor(Math.random() * 1000);
             const randomPassword = Math.random().toString(36).slice(-8);
             const hashedPassword = await bcrypt.hash(randomPassword, 10);
             
-            // Extract first and last name from full name
-            const nameParts = name.split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
+            // Extract first and last name from Google data or full name
+            const firstName = given_name || name.split(' ')[0] || '';
+            const lastName = family_name || (name.split(' ').length > 1 ? name.split(' ').slice(1).join(' ') : '') || '';
             
             user = new User({
                 username,
@@ -117,25 +149,21 @@ exports.googleLogin = async (req, res) => {
             
             await user.save();
             isNewUser = true; // Mark this as a new user
+            console.log(`New user created for: ${email}`);
+        } else {
+            console.log(`Existing user found for: ${email}`);
         }
         
         // Generate JWT token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY || '24h' });
+        const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY || '24h' });
         
         res.status(200).json(generateResponse('success', 'Google login successful', {
-            token,
-            user: { 
-                id: user._id, 
-                username: user.username, 
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                profileImage: user.profileImage
-            },
-            isNewUser: isNewUser // Include the flag in response
+            token: jwtToken,
+            user: formatUserResponse(user),
+            isNewUser
         }));
     } catch (error) {
         console.error('Google login error:', error);
-        res.status(500).json(generateResponse('error', 'Error with Google login'));
+        res.status(500).json(generateResponse('error', 'Error with Google login: ' + error.message));
     }
 };

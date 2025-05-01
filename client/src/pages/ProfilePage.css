@@ -258,7 +258,7 @@
     background-color: #e9e9e9;
 }
 
-.share-btn {
+.settings-btn {
     background-color: transparent;
     color: #333;
     border: 1px solid #ddd;
@@ -271,7 +271,7 @@
     cursor: pointer;
 }
 
-.share-btn:hover {
+.settings-btn:hover {
     background-color: #f0f0f0;
 }
 
@@ -424,11 +424,11 @@
 .tab-navigation-v2 {
     display: flex;
     border-bottom: 1px solid #eee;
+    justify-content: center; /* Center the tab buttons */
 }
 
 .tab-navigation-v2 .tab-button {
-    flex: 1;
-    padding: 15px 10px;
+    padding: 15px 20px; /* Adjust padding as needed */
     background: none;
     border: none;
     cursor: pointer;
@@ -437,6 +437,7 @@
     color: #666;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease-in-out;
+    white-space: nowrap; /* Prevent wrapping */
 }
 
 .tab-navigation-v2 .tab-button:hover {
@@ -462,6 +463,77 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+}
+
+/* Times Tab Content */
+.times-tab-content .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.times-tab-content .section-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.times-tab-content .section-header .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 1;
+    visibility: visible;
+}
+
+.times-tab-content .section-header .add-btn:hover {
+    background-color: #0055b3 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* General button styles within the profile page */
+.profile-page-v2 .btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    border: none;
+}
+
+.profile-page-v2 .add-btn {
+    background-color: #0066cc;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-page-v2 .add-btn:hover {
+    background-color: #0055b3 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-page-v2 .cancel-btn {
+    background-color: #ccc;
+    color: #333;
+}
+
+.profile-page-v2 .cancel-btn:hover {
+    background-color: #bbb;
 }
 
 /* Times Tab List */
@@ -666,7 +738,7 @@
 
 /* Create Post and Challenge buttons */
 .create-post-btn,
-.submit-time-btn,
+.submit-time-btn, /* Keep consistent styling */
 .create-challenge-btn {
     display: flex;
     align-items: center;
@@ -680,12 +752,14 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    opacity: 1; /* Ensure visible by default */
+    visibility: visible; /* Ensure visible by default */
 }
 
 .create-post-btn:hover,
 .submit-time-btn:hover,
 .create-challenge-btn:hover {
-    background-color: #0055b3;
+    background-color: #0055b3 !important; /* Maintain hover effect */
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -721,35 +795,13 @@
     font-size: 1.1rem;
 }
 
-/* Fix button display and alignment */
-.add-btn,
-.submit-time-btn,
-.create-post-btn,
-.create-challenge-btn {
-    opacity: 1 !important; /* Force buttons to always be visible */
-    display: inline-flex !important; /* Ensure flexbox layout is applied */
-    align-items: center !important; /* Center items vertically */
-    justify-content: center !important; /* Center items horizontally */
-    gap: 8px !important; /* Consistent spacing between icon and text */
-}
-
-/* Ensure SVG icons are properly sized and aligned */
-.add-btn svg,
-.submit-time-btn svg,
-.create-post-btn svg,
-.create-challenge-btn svg {
-    display: inline-block !important;
-    vertical-align: middle !important;
-    margin-right: 5px !important; /* Add additional right margin for better spacing */
-    font-size: 1.1rem !important; /* Consistent icon size */
-}
-
 /* Fix button hover states */
-.add-btn:hover,
 .submit-time-btn:hover,
 .create-post-btn:hover,
 .create-challenge-btn:hover {
-    background-color: #0055b3 !important; /* Slightly darker on hover */
+    background-color: #0055b3 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Posts and Challenges content placeholders */
@@ -1037,6 +1089,7 @@
 /* Times Sections Nav */
 .times-sections-nav {
     display: flex;
+    justify-content: center; /* Center the section buttons */
     margin-bottom: 20px;
     border-bottom: 1px solid #eee;
 }

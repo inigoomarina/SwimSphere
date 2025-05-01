@@ -95,7 +95,7 @@ function StepContentWrapper({ isCompleted, currentStep, direction, children, cla
 // SlideTransition component
 const stepVariants = {
   enter: (dir) => ({
-    x: dir >= 0 ? "-100%" : "100%", // Adjusted for smoother entry
+    x: dir >= 0 ? "100%" : "-100%", // Reverse: Enter from right when going next (dir >= 0)
     opacity: 0,
   }),
   center: {
@@ -103,7 +103,7 @@ const stepVariants = {
     opacity: 1,
   },
   exit: (dir) => ({
-    x: dir >= 0 ? "100%" : "-100%", // Adjusted for smoother exit
+    x: dir >= 0 ? "-100%" : "100%", // Reverse: Exit to left when going next (dir >= 0)
     opacity: 0,
   }),
 };

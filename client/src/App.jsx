@@ -4,15 +4,15 @@ import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, AuthContext } from './context/AuthContext.jsx'; // Explicitly import .jsx
-import { ChatProvider } from './context/ChatContext.jsx'; // Update to explicit .jsx extension
+import { ChatProvider } from './context/ChatContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { ToastProvider } from './context/ToastContext.jsx'; // Update to explicit .jsx extension
+import { ToastProvider } from './context/ToastContext';
 import theme from './theme';
+import Loader from './components/common/Loader'; // Add this import
 // Import the flowbite CSS if you're getting styled components errors
 import 'flowbite/dist/flowbite.min.css';
 
 // Pages
-import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Logout from './pages/Logout';
@@ -26,94 +26,99 @@ import ChatPage from './pages/ChatPage';
 import OnboardingPage from './pages/OnboardingPage'; // Import OnboardingPage
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
+import SettingsPage from './pages/SettingsPage'; // Import SettingsPage
 
 // Protected Route component to check authentication
 const ProtectedRoute = ({ component: Component, ...rest }) => {
   const { user, isAuthenticated, loading } = useContext(AuthContext);
-  
+
   return (
     <Route
       {...rest}
       render={props => {
-        // If still loading auth state, return nothing yet
+        // Still loading - show loader
         if (loading) {
-          return null;
+          return <Loader />;
         }
-        
-        // Special case for onboarding route
-        if (rest.path === '/onboarding') {
-          // If not authenticated, redirect to login
-          if (!isAuthenticated) {
-            return <Redirect to="/login" />;
-          }
-          
-          // If user has already completed onboarding, redirect to dashboard
-          if (user && user.role && user.firstName && user.lastName) {
-            return <Redirect to="/dashboard" />;
-          }
-          
-          // Otherwise, allow access to onboarding
-          return <Component {...props} />;
-        }
-        
-        // For all other protected routes, redirect to login if not authenticated
+
+        // Not authenticated - go to login
         if (!isAuthenticated) {
+          console.log("Not authenticated, redirecting to login");
           return <Redirect to="/login" />;
         }
-        
-        // If user is authenticated but hasn't completed basic profile setup,
-        // redirect to onboarding (except for logout route)
-        if (user && (!user.role || !user.firstName) && rest.path !== '/logout') {
-          return <Redirect to="/onboarding" />;
+
+        // User is authenticated, now check onboarding status
+        const isOnboardingRoute = rest.path === '/onboarding';
+        const onboardingComplete = user?.onboardingComplete === true;
+
+        if (isOnboardingRoute) {
+          // If on the onboarding route:
+          if (onboardingComplete) {
+            // If onboarding is complete, redirect away from onboarding to dashboard
+            console.log("Authenticated user has completed onboarding, redirecting from /onboarding to /dashboard");
+            return <Redirect to="/dashboard" />;
+          } else {
+            // If onboarding is not complete, allow access to the onboarding page
+            return <Component {...props} />;
+          }
+        } else {
+          // If on any other protected route:
+          if (!onboardingComplete && rest.path !== '/logout') {
+            // If onboarding is not complete, redirect to onboarding
+            console.log("Authenticated user needs onboarding, redirecting to /onboarding");
+            return <Redirect to="/onboarding" />;
+          } else {
+            // If onboarding is complete, allow access to the requested route
+            return <Component {...props} />;
+          }
         }
-        
-        // If user is authenticated, render the component
-        return <Component {...props} />;
       }}
     />
   );
 };
 
-// Animated Routes Component
+// AnimatedRoutes Component
 const AnimatedRoutes = () => {
   const location = useLocation();
   const { isAuthenticated, loading } = useContext(AuthContext);
 
-  // Determine if we should show header and footer
-  // Add '/onboarding' to the list of pages without header/footer
   const isAuthOrOnboardingPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/onboarding';
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Conditionally render Header based on the page */}
+      {/* Only show header if not on auth or onboarding pages */}
       {!isAuthOrOnboardingPage && <Header />}
-      {/* Adjust main content padding based on header presence */}
       <main className={`flex-grow ${!isAuthOrOnboardingPage ? 'pt-16' : ''}`}>
         <AnimatePresence mode="wait">
           <Switch location={location} key={location.pathname}>
+            {/* Root path - always redirect to login if not authenticated, dashboard if authenticated */}
             <Route exact path="/">
-              {loading ? null : isAuthenticated ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+              {loading ? <Loader /> : isAuthenticated ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
             </Route>
+            
+            {/* Auth routes */}
             <Route path="/login">
-              {loading ? null : isAuthenticated ? <Redirect to="/dashboard" /> : <Login />}
+              {loading ? <Loader /> : isAuthenticated ? <Redirect to="/dashboard" /> : <Login />}
             </Route>
             <Route path="/register">
-              {loading ? null : isAuthenticated ? <Redirect to="/dashboard" /> : <Register />}
+              {loading ? <Loader /> : isAuthenticated ? <Redirect to="/dashboard" /> : <Register />}
             </Route>
             <Route path="/logout" component={Logout} />
+            
+            {/* Protected routes */}
+            <ProtectedRoute path="/dashboard" component={Dashboard} />
             <ProtectedRoute path="/profile" component={ProfilePage} />
             <ProtectedRoute path="/feed" component={Feed} />
             <ProtectedRoute path="/records" component={RecordsPage} />
             <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
-            <ProtectedRoute path="/dashboard" component={Dashboard} />
+            <ProtectedRoute path="/settings" component={SettingsPage} />
             <ProtectedRoute path="/coach" component={CoachDashboard} />
             <ProtectedRoute path="/chat" component={ChatPage} />
-            {/* Onboarding route remains protected but won't show header/footer */}
             <ProtectedRoute path="/onboarding" component={OnboardingPage} />
           </Switch>
         </AnimatePresence>
       </main>
-      {/* Conditionally render Footer based on the page */}
+      {/* Only show footer if not on auth or onboarding pages */}
       {!isAuthOrOnboardingPage && <Footer />}
     </div>
   );

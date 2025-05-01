@@ -1,194 +1,141 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useHistory } from 'react-router-dom';
-import { searchUsers, toggleFollowUser } from '../../utils/api';
-import { useToast } from '../../context/ToastContext';
+import { Link } from 'react-router-dom';
+import { searchUsers } from '../../utils/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 import './SearchBar.css';
 
-const SearchBar = ({ onClose }) => {
+const SearchBar = ({ placeholder = "Search users...", className = "", onSelect }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [isFollowingInProgress, setIsFollowingInProgress] = useState({});
-    const searchTimeout = useRef(null);
-    const inputRef = useRef(null);
-    const resultsContainerRef = useRef(null);
-    const { showToast } = useToast();
-    const history = useHistory();
-    
-    // Handle search query changes with debounce
+    const [showResults, setShowResults] = useState(false);
+    const searchRef = useRef(null);
+    const resultsRef = useRef(null);
+
+    // Search for users when query changes
     useEffect(() => {
-        if (searchTimeout.current) {
-            clearTimeout(searchTimeout.current);
-        }
-        
-        if (!query || query.trim().length < 2) {
-            setResults([]);
-            setLoading(false);
-            return;
-        }
-        
-        setLoading(true);
-        
-        searchTimeout.current = setTimeout(async () => {
-            try {
-                const response = await searchUsers(query);
-                if (response.status === 'success') {
-                    setResults(response.data);
-                } else {
-                    showToast('Failed to search users', 'error');
+        const timer = setTimeout(async () => {
+            if (query.trim().length >= 2) {
+                setLoading(true);
+                try {
+                    const response = await searchUsers(query);
+                    if (response.status === 'success') {
+                        setResults(response.data);
+                    } else {
+                        setResults([]);
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    setResults([]);
+                } finally {
+                    setLoading(false);
                 }
-            } catch (err) {
-                console.error('Search error:', err);
-                showToast('Search failed', 'error');
-            } finally {
-                setLoading(false);
+            } else {
+                setResults([]);
             }
-        }, 300); // 300ms debounce
-        
-        return () => {
-            if (searchTimeout.current) {
-                clearTimeout(searchTimeout.current);
-            }
-        };
-    }, [query, showToast]);
-    
-    // Auto-focus the search input
-    useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, []);
-    
-    // Handle clicks outside of search results
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    // Close results when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (resultsContainerRef.current && !resultsContainerRef.current.contains(event.target)) {
-                if (onClose && typeof onClose === 'function') {
-                    onClose();
-                }
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowResults(false);
             }
         };
-        
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [onClose]);
-    
-    const handleToggleFollow = async (userId, isFollowing, event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        if (isFollowingInProgress[userId]) return;
-        
-        try {
-            setIsFollowingInProgress(prev => ({ ...prev, [userId]: true }));
-            
-            console.log("Toggling follow for user:", userId);
-            const response = await toggleFollowUser(userId);
-            console.log("Follow response:", response);
-            
-            if (response.status === 'success') {
-                // Update the followed status in the results
-                setResults(prev => prev.map(user => 
-                    user.id === userId ? { ...user, isFollowing: !isFollowing } : user
-                ));
-                
-                showToast(
-                    isFollowing 
-                        ? `Unfollowed user successfully` 
-                        : `Following user successfully`
-                );
-            } else {
-                showToast('Failed to update follow status', 'error');
-            }
-        } catch (err) {
-            console.error('Follow toggle error:', err);
-            showToast('Failed to update follow status', 'error');
-        } finally {
-            setIsFollowingInProgress(prev => ({ ...prev, [userId]: false }));
-        }
+    }, [searchRef]);
+
+    const handleInputChange = (e) => {
+        setQuery(e.target.value);
+        setShowResults(true);
     };
-    
-    const handleUserClick = (userId) => {
-        history.push(`/profile/${userId}`);
-        if (onClose && typeof onClose === 'function') {
-            onClose();
-        }
+
+    const clearSearch = () => {
+        setQuery('');
+        setResults([]);
+        setShowResults(false);
     };
-    
+
+    const handleResultClick = (user) => {
+        if (onSelect) {
+            onSelect(user);
+        }
+        clearSearch();
+    };
+
     return (
-        <div className="search-container" ref={resultsContainerRef}>
+        <div className={`search-bar-container ${className}`} ref={searchRef}>
             <div className="search-input-wrapper">
-                <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
+                <FaSearch className="search-icon" />
                 <input
-                    ref={inputRef}
                     type="text"
-                    className="search-input"
-                    placeholder="Search for swimmers, coaches..."
+                    placeholder={placeholder}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleInputChange}
+                    onFocus={() => setShowResults(true)}
+                    className="search-input"
                 />
                 {query && (
-                    <button 
-                        className="clear-search-btn" 
-                        onClick={() => setQuery('')}
-                    >
-                        &times;
+                    <button className="clear-search-btn" onClick={clearSearch}>
+                        <FaTimes />
                     </button>
                 )}
             </div>
             
-            {(results.length > 0 || loading) && (
-                <div className="search-results">
-                    {loading && (
-                        <div className="search-loading">Searching...</div>
-                    )}
-                    
-                    {!loading && results.length > 0 && (
-                        <>
-                            {results.map(user => (
-                                <div 
-                                    key={user.id} 
-                                    className="search-result-card"
-                                    onClick={() => handleUserClick(user.id)}
+            <AnimatePresence>
+                {showResults && (
+                    <motion.div 
+                        className="search-results"
+                        ref={resultsRef}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {loading ? (
+                            <div className="search-loading">
+                                <div className="loading-spinner"></div>
+                                <p>Searching...</p>
+                            </div>
+                        ) : results.length > 0 ? (
+                            results.map(user => (
+                                <Link 
+                                    to={`/profile/${user.id}`} 
+                                    key={user.id}
+                                    className="search-result-item"
+                                    onClick={() => handleResultClick(user)}
                                 >
                                     <img 
-                                        src={user.profileImage || "/default-avatar.png"} 
+                                        src={user.profileImage || "/images/default-avatar.png"} 
                                         alt={user.name} 
-                                        className="result-avatar"
+                                        className="user-avatar"
                                     />
-                                    <div className="result-details">
-                                        <span className="result-name">{user.name}</span>
-                                        <span className="result-username">@{user.username}</span>
-                                        {user.swimTeam && (
-                                            <span className="result-team">{user.swimTeam}</span>
-                                        )}
+                                    <div className="user-info">
+                                        <div className="user-name">{user.name}</div>
+                                        <div className="user-username">{user.formattedUsername}</div>
                                     </div>
-                                    <button 
-                                        className={`follow-btn ${user.isFollowing ? 'following' : ''}`}
-                                        onClick={(e) => handleToggleFollow(user.id, user.isFollowing, e)}
-                                        disabled={isFollowingInProgress[user.id]}
-                                    >
-                                        {isFollowingInProgress[user.id] ? (
-                                            <span className="loading-spinner-small"></span>
-                                        ) : user.isFollowing ? 'Following' : 'Follow'}
-                                    </button>
-                                </div>
-                            ))}
-                        </>
-                    )}
-                    
-                    {!loading && query.length >= 2 && results.length === 0 && (
-                        <div className="no-results">
-                            No users found matching "{query}"
-                        </div>
-                    )}
-                </div>
-            )}
+                                </Link>
+                            ))
+                        ) : query.length >= 2 ? (
+                            <div className="no-results">
+                                <p>No results found</p>
+                            </div>
+                        ) : query.length > 0 ? (
+                            <div className="search-hint">
+                                <p>Enter at least 2 characters to search</p>
+                            </div>
+                        ) : null}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

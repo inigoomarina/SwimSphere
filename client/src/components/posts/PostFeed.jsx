@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext.jsx'; // Add .jsx extension
 import { getPosts } from '../../utils/api';
 import PostCard from './PostCard';
 import Loader from '../common/Loader';
@@ -8,49 +8,63 @@ import Button from '../common/Button';
 import { uploadMedia, createPost } from '../../utils/api';
 import './PostFeed.css';
 
-const PostFeed = ({ userFeed = false, userId = null, showCreatePost = true }) => {
-    const { user } = useContext(AuthContext);
+const PostFeed = ({ userFeed = false, userId = null, showCreatePost = true, forceRefresh = 0 }) => {
+    // Add fallback in case context is undefined
+    const authContext = useContext(AuthContext) || {};
+    const user = authContext.user || {};
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const [creating, setCreating] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
+
+    // Add a useEffect to respond to forceRefresh changes
+    useEffect(() => {
+        // When forceRefresh changes, reset to page 1 and reload posts
+        if (forceRefresh > 0) {
+            setPage(1);
+            loadPosts(true); // Pass true to force a refresh from the server
+        }
+    }, [forceRefresh]);
 
     useEffect(() => {
         loadPosts();
     }, [page, userId, userFeed]);
 
-    const loadPosts = async () => {
+    // Modify loadPosts to accept a force refresh parameter
+    const loadPosts = async (forceRefresh = false) => {
         try {
             setLoading(true);
             let response;
             
             if (userId) {
                 // Get posts for a specific user (profile page)
-                response = await fetch(`/api/posts/user/${userId}?page=${page}`, {
+                response = await fetch(`/api/posts/user/${userId}?page=${forceRefresh ? 1 : page}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
+                response = await response.json(); // Parse the response
             } else {
                 // Get feed posts (dashboard)
-                response = await getPosts(page);
+                response = await getPosts(forceRefresh ? 1 : page);
             }
             
-            if (!response.success && !response.data) {
+            if (!response || (!response.success && !response.status)) {
                 throw new Error("Failed to load posts");
             }
             
-            if (page === 1) {
-                setPosts(response.data.posts);
+            // If forcing refresh or on page 1, replace all posts
+            // Otherwise append to existing posts
+            if (forceRefresh || page === 1) {
+                setPosts(response.data?.posts || []);
             } else {
-                setPosts(prev => [...prev, ...response.data.posts]);
+                setPosts(prev => [...prev, ...(response.data?.posts || [])]);
             }
             
-            setHasMore(response.data.currentPage < response.data.totalPages);
+            setHasMore(response.data?.currentPage < response.data?.totalPages);
             setError('');
         } catch (err) {
             console.error('Error loading posts:', err);
@@ -87,6 +101,10 @@ const PostFeed = ({ userFeed = false, userId = null, showCreatePost = true }) =>
                 // Add the new post to the top of the feed
                 setPosts(prev => [response.data, ...prev]);
                 setShowCreateForm(false);
+                
+                // Force a complete reload of posts to ensure consistency
+                loadPosts(true);
+                
                 return true;
             } else {
                 throw new Error(response.message || "Failed to create post");

@@ -17,44 +17,53 @@ exports.getUserProfile = async (req, res) => {
 
 // Update user profile
 exports.updateUserProfile = async (req, res) => {
-    const { 
-        username, email, firstName, lastName, bio, 
-        birthDate, swimTeam, role, profileImage, profileBanner,
-        favoriteStroke, favoriteEvent 
-    } = req.body;
-
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json(generateResponse('error', 'User not found'));
         }
 
-        // Update basic fields if provided
+        // Get all updatable fields from request body
+        const { 
+            username, email, firstName, lastName, bio, 
+            birthDate, swimTeam, role, profileImage, profileBanner,
+            favoriteStroke, favoriteEvent, city, country,
+            coachRole, onboardingComplete
+        } = req.body;
+
+        // Update fields if provided
         if (username) user.username = username;
         if (email) user.email = email;
-        if (firstName) user.firstName = firstName;
-        if (lastName) user.lastName = lastName;
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
         if (bio !== undefined) user.bio = bio;
         if (birthDate) user.birthDate = birthDate;
         if (swimTeam !== undefined) user.swimTeam = swimTeam;
         if (role && ['swimmer', 'coach'].includes(role)) user.role = role;
-        
-        // Update image fields if provided
         if (profileImage) user.profileImage = profileImage;
         if (profileBanner) user.profileBanner = profileBanner;
-        
-        // Update preferences if provided
         if (favoriteStroke !== undefined) user.favoriteStroke = favoriteStroke;
         if (favoriteEvent !== undefined) user.favoriteEvent = favoriteEvent;
+        if (city !== undefined) user.city = city;
+        if (country !== undefined) user.country = country;
+        if (coachRole !== undefined) user.coachRole = coachRole;
+        
+        // CRITICAL: Ensure onboardingComplete flag is set correctly
+        if (onboardingComplete !== undefined) {
+            user.onboardingComplete = Boolean(onboardingComplete);
+            console.log(`Setting onboardingComplete to: ${user.onboardingComplete}`);
+        }
 
         user.updatedAt = Date.now();
         const updatedUser = await user.save();
         
-        res.json(generateResponse('success', 'Profile updated successfully', 
-            updatedUser.toObject({ getters: true, virtuals: true, transform: (doc, ret) => {
-                delete ret.password;
-                return ret;
-            }})));
+        console.log("Profile updated successfully. onboardingComplete:", updatedUser.onboardingComplete);
+        
+        // Return clean user object
+        const userResponse = updatedUser.toObject({ getters: true, virtuals: true });
+        delete userResponse.password;
+        
+        res.json(generateResponse('success', 'Profile updated successfully', userResponse));
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json(generateResponse('error', 'Error updating profile'));
@@ -272,5 +281,72 @@ exports.searchUsers = async (req, res) => {
     } catch (error) {
         console.error('Search users error:', error);
         res.status(500).json(generateResponse('error', 'Error searching users'));
+    }
+};
+
+// Get user by ID
+exports.getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const user = await User.findById(id)
+            .select('-password');
+        
+        if (!user) {
+            return res.status(404).json(generateResponse('error', 'User not found'));
+        }
+        
+        // Check if current user is following this user
+        const Follow = require('../models/Follow');
+        const isFollowing = await Follow.exists({
+            followerId: req.user.id,
+            followingId: id
+        });
+        
+        // Get follower and following counts
+        const followersCount = await Follow.countDocuments({ followingId: id });
+        const followingCount = await Follow.countDocuments({ followerId: id });
+        
+        const userResponse = {
+            ...user.toObject(),
+            isFollowing: !!isFollowing,
+            followersCount,
+            followingCount
+        };
+        
+        res.json(generateResponse('success', 'User retrieved successfully', userResponse));
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json(generateResponse('error', 'Error retrieving user'));
+    }
+};
+
+// Get following users (for chat list)
+exports.getFollowingUsers = async (req, res) => {
+    try {
+        const Follow = require('../models/Follow');
+        
+        // Get IDs of users that the current user follows
+        const follows = await Follow.find({ followerId: req.user.id });
+        const followingIds = follows.map(follow => follow.followingId);
+        
+        // Get details of those users
+        const followingUsers = await User.find({ _id: { $in: followingIds } })
+            .select('username firstName lastName profileImage')
+            .sort({ firstName: 1, lastName: 1 });
+            
+        const formattedUsers = followingUsers.map(user => ({
+            id: user._id,
+            username: user.username,
+            name: user.firstName && user.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user.username,
+            profileImage: user.profileImage || '/images/default-avatar.png'
+        }));
+        
+        res.json(generateResponse('success', 'Following users retrieved successfully', formattedUsers));
+    } catch (error) {
+        console.error('Get following error:', error);
+        res.status(500).json(generateResponse('error', 'Error retrieving following users'));
     }
 };

@@ -15,15 +15,27 @@ export const generateRandomId = () => {
     return Math.random().toString(36).substr(2, 9);
 };
 
-// Format swim time from seconds to MM:SS.ms
+/**
+ * Formats a swim time in seconds to a human-readable format (MM:SS.ss)
+ * @param {number} timeInSeconds - Time in seconds
+ * @return {string} Formatted time string
+ */
 export const formatSwimTime = (timeInSeconds) => {
-  if (!timeInSeconds) return '--';
+  if (!timeInSeconds && timeInSeconds !== 0) return '--';
   
   const minutes = Math.floor(timeInSeconds / 60);
-  const seconds = Math.floor(timeInSeconds % 60);
-  const milliseconds = Math.round((timeInSeconds - Math.floor(timeInSeconds)) * 100);
+  const seconds = timeInSeconds % 60;
   
-  return `${minutes > 0 ? minutes + ':' : ''}${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+  // Format seconds with two decimal places
+  const formattedSeconds = seconds.toFixed(2).padStart(5, '0');
+  
+  // For times less than a minute, don't show leading zeros
+  if (minutes === 0) {
+    return formattedSeconds;
+  }
+  
+  // Format as MM:SS.ss
+  return `${minutes}:${formattedSeconds}`;
 };
 
 // Format time input (for UI)

@@ -1,12 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Stepper, { Step } from '../components/onboarding/OnboardingStepper';
-import { AuthContext } from '../context/AuthContext';
-import { updateUserProfile } from '../utils/api'; // Assuming you have this
-import Loader from '../components/common/Loader'; // Assuming you have a Loader
+import { AuthContext } from '../context/AuthContext.jsx';
+import { updateUserProfile } from '../utils/api';
+import Loader from '../components/common/Loader';
+import '../components/common/ButtonFixes.css'; // Add this import
 
-// Material UI for form elements (optional, can use plain HTML)
-import { TextField, Select, MenuItem, FormControl, InputLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+// Material UI for form elements
+import { TextField, Select, MenuItem, FormControl, InputLabel, RadioGroup, Radio } from '@mui/material';
 
 const OnboardingPage = () => {
   const { user, login } = useContext(AuthContext);
@@ -15,32 +16,42 @@ const OnboardingPage = () => {
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
+    // Personal info
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
+    username: user?.username ? '@' + user?.username : '',
+    city: user?.city || '',
+    country: user?.country || '',
+    
+    // Role
     role: user?.role || '',
+    
     // Swimmer specific
     favoriteStroke: user?.favoriteStroke || 'freestyle',
+    favoriteEvent: user?.favoriteEvent || '100m Freestyle',
+    
     // Coach specific
     team: user?.swimTeam || '',
-    coachRole: user?.coachRole || 'assistant', // e.g., head, assistant, volunteer
+    coachRole: user?.coachRole || 'assistant',
   });
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [followedUsers, setFollowedUsers] = useState({}); // Track followed state
+  const [followedUsers, setFollowedUsers] = useState({});
 
   // Determine theme based on selected role
   const theme = formData.role === 'coach' ? 'purple' : 'blue';
 
-  // Redirect if user data is missing or already onboarded (basic check)
+  // Redirect if user data is missing or onboarding is already complete
   useEffect(() => {
     if (!user) {
+      console.log("No user found, redirecting to login");
       history.push('/login');
       return;
     }
-    
-    // If user has completed onboarding before (check for role or other onboarding flags)
-    if (user.role && user.firstName && user.lastName) {
-      // This is a returning user who already completed onboarding
+
+    // Check the onboardingComplete flag from the context
+    if (user.onboardingComplete === true) {
+      console.log("User already completed onboarding (context check), redirecting to dashboard");
       history.push('/dashboard');
     }
   }, [user, history]);
@@ -53,11 +64,12 @@ const OnboardingPage = () => {
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
     setFormData(prev => ({ ...prev, role: newRole }));
-    // Reset fields specific to the *other* role if needed
+    
+    // Reset fields specific to the other role
     if (newRole === 'swimmer') {
       setFormData(prev => ({ ...prev, team: '', coachRole: 'assistant' }));
     } else if (newRole === 'coach') {
-      setFormData(prev => ({ ...prev, favoriteStroke: 'freestyle' }));
+      setFormData(prev => ({ ...prev, favoriteStroke: 'freestyle', favoriteEvent: '100m Freestyle' }));
     }
   };
 
@@ -66,61 +78,82 @@ const OnboardingPage = () => {
       ...prev,
       [userId]: !prev[userId]
     }));
-    // Here you might call an API to actually follow/unfollow the user
-    // console.log(`${followedUsers[userId] ? 'Unfollowed' : 'Followed'} user ${userId}`);
   };
 
-  const handleFinalStep = async () => {
+  const handleSubmit = async () => {
+    if (loading) return;
+
     setLoading(true);
     setError('');
+
     try {
-      // Prepare data based on role
-      const profileData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: formData.role,
-        ...(formData.role === 'swimmer' && { favoriteStroke: formData.favoriteStroke }),
-        ...(formData.role === 'coach' && { swimTeam: formData.team, coachRole: formData.coachRole }),
-        // Add flag to indicate onboarding is complete
-        onboardingComplete: true,
+      // Clean up form data before submission
+      const submissionData = {
+        ...formData,
+        username: formData.username.startsWith('@') ? formData.username.substring(1) : formData.username,
+        swimTeam: formData.team || formData.swimTeam,
+        onboardingComplete: true // Explicitly set onboardingComplete to true
       };
+      delete submissionData.team; // Remove the temporary 'team' field if it exists
 
-      const response = await updateUserProfile(profileData);
+      const response = await updateUserProfile(submissionData);
 
-      if (response.status === 'success') {
-        // Update user context with the latest data
-        login(response.data);
-        // Redirect to dashboard after a short delay to show the final step message
-        setTimeout(() => {
-          history.push('/dashboard');
-        }, 1500); // 1.5 second delay
+      if (response.status === 'success' && response.data) {
+        // Update the user in context with the *full* response data from the API
+        // This ensures onboardingComplete and all other fields are correctly set
+        const updatedUserFromApi = {
+          ...user, // Keep existing user data like ID
+          ...response.data, // Overwrite with the latest data from the API response
+          onboardingComplete: true // Ensure this is explicitly true in the context update
+        };
+        login(updatedUserFromApi); // Update the context
+
+        // Redirect to dashboard AFTER context update
+        history.push('/dashboard');
       } else {
-        setError(response.message || 'Failed to update profile.');
-        setLoading(false); // Stop loading on error
+        setError(response.message || 'Failed to update profile. Please try again.');
+        setLoading(false); // Stop loading on failure
       }
     } catch (err) {
-      setError('An error occurred while saving your profile.');
-      console.error(err);
+      setError(err.message || 'An unexpected error occurred.');
+      console.error('Error in onboarding:', err);
       setLoading(false); // Stop loading on error
     }
   };
 
-  // Placeholder recommendations
+  // Recommendation data
   const swimmerRecommendations = [
-    { id: 'rec1', name: 'Michael Phelps', team: 'Retired Legend', profileImage: '/placeholder-avatar-1.png' },
-    { id: 'rec2', name: 'Katie Ledecky', team: 'Team USA', profileImage: '/placeholder-avatar-2.png' },
-    { id: 'rec3', name: 'Caeleb Dressel', team: 'Team USA', profileImage: '/placeholder-avatar-3.png' },
+    { id: 'rec1', name: 'Michael Phelps', team: 'Retired Legend', profileImage: '/images/placeholder-avatar-1.png' },
+    { id: 'rec2', name: 'Katie Ledecky', team: 'Team USA', profileImage: '/images/placeholder-avatar-2.png' },
+    { id: 'rec3', name: 'Caeleb Dressel', team: 'Team USA', profileImage: '/images/placeholder-avatar-3.png' },
   ];
+  
   const coachRecommendations = [
-    { id: 'rec4', name: 'Alex Popov', team: 'City Swim Club', profileImage: '/placeholder-avatar-1.png' },
-    { id: 'rec5', name: 'Inge de Bruijn', team: 'University Team', profileImage: '/placeholder-avatar-2.png' },
+    { id: 'rec4', name: 'Alex Popov', team: 'City Swim Club', profileImage: '/images/placeholder-avatar-1.png' },
+    { id: 'rec5', name: 'Inge de Bruijn', team: 'University Team', profileImage: '/images/placeholder-avatar-2.png' },
   ];
 
   const recommendations = formData.role === 'coach' ? coachRecommendations : swimmerRecommendations;
   const recommendationTitle = formData.role === 'coach' ? 'Connect with Swimmers' : 'Follow Swimmers';
 
+  // Swimming events for dropdown
+  const swimmingEvents = [
+    // Freestyle events
+    '50m Freestyle', '100m Freestyle', '200m Freestyle', '400m Freestyle', '800m Freestyle', '1500m Freestyle',
+    // Backstroke events
+    '50m Backstroke', '100m Backstroke', '200m Backstroke',
+    // Breaststroke events
+    '50m Breaststroke', '100m Breaststroke', '200m Breaststroke',
+    // Butterfly events
+    '50m Butterfly', '100m Butterfly', '200m Butterfly',
+    // Individual Medley events
+    '100m Individual Medley', '200m Individual Medley', '400m Individual Medley',
+    // Open water
+    '5km Open Water', '10km Open Water',
+  ];
+
   if (!user) {
-    return <Loader />; // Show loader while user data is loading or redirecting
+    return <Loader />;
   }
 
   return (
@@ -139,20 +172,21 @@ const OnboardingPage = () => {
       <Stepper
         initialStep={currentStep}
         onStepChange={setCurrentStep}
-        onFinalStepCompleted={handleFinalStep}
-        theme={theme} // Pass theme to Stepper
-        disableStepIndicators={loading} // Disable steps while loading final step
+        onFinalStepCompleted={handleSubmit}
+        theme={theme}
+        disableStepIndicators={loading}
         completeButtonText={loading ? 'Saving...' : 'Go to Dashboard'}
         nextButtonProps={{ disabled: loading }}
         backButtonProps={{ disabled: loading }}
       >
-        {/* Step 1: Name */}
+        {/* Step 1: Personal Information */}
         <Step>
           <h2>Welcome to SwimSphere!</h2>
-          <p>Let's get your profile set up. What's your name?</p>
+          <p>Let's start with your personal information.</p>
+          
           <div className="form-group">
             <TextField
-              label="First Name"
+              placeholder="First Name"
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
@@ -161,9 +195,10 @@ const OnboardingPage = () => {
               variant="outlined"
             />
           </div>
+          
           <div className="form-group">
             <TextField
-              label="Last Name"
+              placeholder="Last Name"
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
@@ -172,9 +207,46 @@ const OnboardingPage = () => {
               variant="outlined"
             />
           </div>
+          
+          <div className="form-group">
+            <TextField
+              placeholder="Username Tag"
+              name="username"
+              value={formData.username || '@' + (user?.username || '')}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+              InputProps={{
+                startAdornment: formData.username && !formData.username.startsWith('@') ? 
+                  <span>@</span> : undefined
+              }}
+            />
+          </div>
+          
+          <div className="form-group">
+            <TextField
+              placeholder="City"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+          </div>
+          
+          <div className="form-group">
+            <TextField
+              placeholder="Country"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+          </div>
         </Step>
 
-        {/* Step 2: Role */}
+        {/* Step 2: Role Selection */}
         <Step>
           <h2>Are you a Swimmer or a Coach?</h2>
           <p>This helps us tailor your experience.</p>
@@ -204,13 +276,14 @@ const OnboardingPage = () => {
           </FormControl>
         </Step>
 
-        {/* Step 3: Swimmer Details */}
+        {/* Step 3: Role-specific details */}
+        {/* For swimmers */}
         {formData.role === 'swimmer' && (
           <Step>
             <h2>Swimmer Details</h2>
-            <p>Tell us a bit about your swimming.</p>
+            <p>Tell us about your swimming preferences.</p>
             <FormControl fullWidth variant="outlined" className="form-group">
-              <InputLabel id="favorite-stroke-label">Favorite Stroke</InputLabel>
+              <InputLabel id="favorite-stroke-label" shrink>Favorite Stroke</InputLabel>
               <Select
                 labelId="favorite-stroke-label"
                 id="favoriteStroke"
@@ -226,11 +299,25 @@ const OnboardingPage = () => {
                 <MenuItem value="individualMedley">Individual Medley</MenuItem>
               </Select>
             </FormControl>
-            {/* Add more swimmer-specific questions here if needed */}
+            <FormControl fullWidth variant="outlined" className="form-group">
+              <InputLabel id="favorite-event-label" shrink>Favorite Event</InputLabel>
+              <Select
+                labelId="favorite-event-label"
+                id="favoriteEvent"
+                name="favoriteEvent"
+                value={formData.favoriteEvent}
+                onChange={handleChange}
+                label="Favorite Event"
+              >
+                {swimmingEvents.map(event => (
+                  <MenuItem key={event} value={event}>{event}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Step>
         )}
 
-        {/* Step 3: Coach Details */}
+        {/* For coaches */}
         {formData.role === 'coach' && (
           <Step>
             <h2>Coach Details</h2>
@@ -247,7 +334,7 @@ const OnboardingPage = () => {
               />
             </div>
             <FormControl fullWidth variant="outlined" className="form-group">
-              <InputLabel id="coach-role-label">Your Role</InputLabel>
+              <InputLabel id="coach-role-label" shrink>Your Role</InputLabel>
               <Select
                 labelId="coach-role-label"
                 id="coachRole"
@@ -272,7 +359,7 @@ const OnboardingPage = () => {
           <div className="recommendation-list">
             {recommendations.map(rec => (
               <div key={rec.id} className="recommendation-item">
-                <img src={rec.profileImage || '/default-avatar.png'} alt={rec.name} />
+                <img src={rec.profileImage || '/images/default-avatar.png'} alt={rec.name} />
                 <div className="recommendation-info">
                   <h4>{rec.name}</h4>
                   {rec.team && <p>{rec.team}</p>}
@@ -289,12 +376,11 @@ const OnboardingPage = () => {
           </div>
         </Step>
 
-        {/* Step 5: All Set */}
+        {/* Step 5: Final step */}
         <Step>
           <div className="final-step-content">
             <h2>All Set!</h2>
             <p>Your profile is ready. Let's dive into SwimSphere!</p>
-            {/* The main "Complete" button of the stepper handles the final action */}
             {loading && <Loader />}
             {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
           </div>

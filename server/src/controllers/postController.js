@@ -263,12 +263,16 @@ exports.addComment = async (req, res) => {
         
         // Format the comment for the response
         const formattedComment = {
-            ...newComment,
-            _id: newComment._id,
+            _id: post.comments[post.comments.length - 1]._id,
+            content,
+            createdAt: new Date(),
             author: {
+                _id: user._id,
                 id: user._id,
                 username: user.username,
-                name: `${user.firstName} ${user.lastName}`,
+                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 profileImage: user.profileImage || '/images/default-avatar.png'
             }
         };

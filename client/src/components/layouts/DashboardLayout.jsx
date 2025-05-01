@@ -4,7 +4,7 @@ import './DashboardLayout.css';
 
 const DashboardLayout = ({ leftSidebar, mainContent, rightSidebar }) => {
   return (
-    <div className="dashboard-layout-container mt-16">
+    <div className="dashboard-layout-container mt-6">
       <div className="dashboard-layout">
         {/* Left Sidebar */}
         <motion.div 
